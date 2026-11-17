@@ -733,17 +733,42 @@ h2 {
   width: 100%;
 }
 
-@media (orientation: landscape) and (max-height: 499px) {
+/* Short portrait phones (320x568): a smaller seat ring keeps the primary action in the first screen. */
+@media (orientation: portrait) and (max-height: 600px) {
   .welcome {
-    grid-template-rows: auto auto auto 1fr auto auto;
-    gap: 8px;
+    gap: 12px;
   }
   .welcome__art {
     min-height: 0;
   }
   .welcome__art svg {
-    width: 96px;
-    height: 96px;
+    width: 136px;
+    height: 136px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 499px) {
+  .welcome {
+    grid-template-rows: auto auto auto 1fr auto auto;
+    gap: 8px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .welcome__art {
+    min-height: 0;
+  }
+  .welcome__art svg {
+    width: 80px;
+    height: 80px;
+  }
+  /* A landscape phone has the width for one line in either face, so one line is what it reserves;
+     the primary action stays above the fold at 844x390. */
+  .welcome__title {
+    max-width: 40ch;
+    min-height: 1.3em;
+  }
+  .welcome__body {
+    max-width: 60ch;
+    min-height: 1.6em;
   }
 }
 

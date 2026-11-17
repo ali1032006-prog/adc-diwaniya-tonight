@@ -31,6 +31,7 @@ Flow and hierarchy
 
 Layout and type
 - Welcome: title reserves two lines (line-height 1.3, min-height 2 x 1.3em) and body two lines (2 x 1.6em); a one-line headline sits at the foot of its box (flex end), next to the line it introduces, so the extra room falls between the art and the headline, not between headline and body.
+- Welcome on a landscape phone (844x390): the reserved two-line boxes pushed Next 64px under the fold (it was already 7px under on 2c8c9f3c). Under `(orientation: landscape) and (max-height: 499px)` the title and body get the width for one line (40ch / 60ch) and reserve one line, the seat ring is 80px and the bottom padding 12px, so the primary action sits inside the first screen. Same check at 320x568 found Next 6px under the fold: under `(orientation: portrait) and (max-height: 600px)` the ring is 136px and the gap 12px. Measured at all 9 sizes in Arabic and English: the primary action is inside the first screen everywhere.
 - Invite rows wrap: the diwaniya, area and date take the line (`flex: 1 1 12rem`, `overflow-wrap: anywhere`), Accept and Decline stay together and drop beneath on narrow phones; 10px block padding like the other people rows.
 
 Colour, imagery and icons
