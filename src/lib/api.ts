@@ -327,7 +327,7 @@ export async function createDiwaniya(name: string, area: string) {
 
 export type DiwaniyaSettings = Pick<
   Diwaniya,
-  'name' | 'area' | 'about' | 'rules' | 'visibility' | 'approval' | 'audience' | 'guest_cap' | 'pin_unlock_minutes' | 'usual_slot'
+  'name' | 'area' | 'about' | 'rules' | 'visibility' | 'approval' | 'guest_cap' | 'pin_unlock_minutes' | 'usual_slot'
 >;
 export async function updateDiwaniya(id: string, s: Partial<DiwaniyaSettings>) {
   unwrap(await db().from('diwaniyas').update(s).eq('id', id));

@@ -55,7 +55,6 @@ function SettingsBody({ id }: { id: string }) {
         rules: d.rules,
         visibility: d.visibility,
         approval: d.approval,
-        audience: d.audience,
         guest_cap: d.guest_cap,
         pin_unlock_minutes: d.pin_unlock_minutes,
         usual_slot: d.usual_slot,
@@ -123,15 +122,6 @@ function SettingsBody({ id }: { id: string }) {
               {(['host', 'regulars_auto'] as const).map((v) => (
                 <option key={v} value={v}>
                   {c.settings.approvalOpts[v]}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={c.settings.audience}>
-            <select className="input" value={form.audience} onChange={(e) => set('audience', e.target.value as DiwaniyaSettings['audience'])}>
-              {(['all', 'men', 'women', 'families'] as const).map((v) => (
-                <option key={v} value={v}>
-                  {c.settings.audienceOpts[v]}
                 </option>
               ))}
             </select>
