@@ -1,21 +1,46 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavBar } from './components/NavBar';
-import { Tonight, Diwaniya, League, Inbox } from './screens/Tabs';
+import { Tonight } from './screens/Tonight';
+import { Board } from './screens/Board';
+import { League } from './screens/League';
+import { Inbox } from './screens/Inbox';
 import { Me } from './screens/Me';
+import { Place } from './screens/Place';
+import { Settings } from './screens/Settings';
+import { Score } from './screens/Score';
+import { Player } from './screens/Player';
 import { Welcome } from './screens/Welcome';
 import { PrefsContext, loadPrefs, savePrefs, type Prefs } from './lib/prefs';
+import { SessionProvider, useSession } from './lib/session';
+import { useAsync } from './lib/useAsync';
+import { unreadCount } from './lib/api';
 import { dirFor, STRINGS } from './lib/i18n';
-import { useRoute, type Tab } from './lib/router';
+import { TABS, tabOf, useRoute, type Route, type Tab } from './lib/router';
 
 const WELCOMED = 'dt.welcomed.v1';
 
-const SCREENS: Record<Tab, () => React.JSX.Element> = {
-  tonight: Tonight,
-  diwaniya: Diwaniya,
-  league: League,
-  inbox: Inbox,
-  me: Me,
-};
+function screenFor(route: Route): React.JSX.Element {
+  switch (route.name) {
+    case 'place':
+      return <Place id={route.id} />;
+    case 'settings':
+      return <Settings id={route.id} />;
+    case 'score':
+      return <Score id={route.id} table={route.table} />;
+    case 'player':
+      return <Player id={route.id} />;
+    case 'diwaniya':
+      return <Board />;
+    case 'league':
+      return <League />;
+    case 'inbox':
+      return <Inbox />;
+    case 'me':
+      return <Me />;
+    default:
+      return <Tonight />;
+  }
+}
 
 export function App() {
   const [prefs, setPrefsState] = useState<Prefs>(() => loadPrefs());
@@ -27,7 +52,6 @@ export function App() {
     });
   }, []);
   const ctx = useMemo(() => ({ prefs, setPrefs }), [prefs, setPrefs]);
-  const route = useRoute();
 
   // Language drives dir; theme drives the palette (auto follows prefers-color-scheme in CSS).
   useEffect(() => {
@@ -37,6 +61,26 @@ export function App() {
     root.dataset.theme = prefs.theme;
     document.title = STRINGS[prefs.lang].appName;
   }, [prefs]);
+
+  return (
+    <PrefsContext.Provider value={ctx}>
+      <SessionProvider>
+        <Shell />
+      </SessionProvider>
+    </PrefsContext.Provider>
+  );
+}
+
+function Shell() {
+  const route = useRoute();
+  const { status } = useSession();
+  const lastTab = useRef<Tab>('tonight');
+  const active = tabOf(route, lastTab.current);
+  // Saffron unread count on the Inbox tab, kept live.
+  const unread = useAsync(() => (status === 'ready' ? unreadCount() : Promise.resolve(0)), [status], status === 'ready' ? ['inbox'] : []);
+  useEffect(() => {
+    if ((TABS as readonly string[]).includes(route.name)) lastTab.current = route.name as Tab;
+  }, [route.name]);
 
   // First open goes to Welcome once; after that the app opens on Tonight.
   useEffect(() => {
@@ -49,23 +93,22 @@ export function App() {
     window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
   }, []);
 
-  if (route.name === 'welcome') {
+  if (route.name === 'welcome') return <Welcome onDone={() => localStorage.setItem(WELCOMED, '1')} />;
+  const key = route.name + ('id' in route ? route.id : '');
+  // Score a game is full screen: the bar steps aside for the room.
+  if (route.name === 'score') {
     return (
-      <PrefsContext.Provider value={ctx}>
-        <Welcome onDone={() => localStorage.setItem(WELCOMED, '1')} />
-      </PrefsContext.Provider>
+      <main className="screen screen--full" key={key}>
+        {screenFor(route)}
+      </main>
     );
   }
-
-  const Current = SCREENS[route.name];
   return (
-    <PrefsContext.Provider value={ctx}>
-      <div className="shell">
-        <NavBar active={route.name} onReselect={reselect} />
-        <main className="screen" key={route.name}>
-          <Current />
-        </main>
-      </div>
-    </PrefsContext.Provider>
+    <div className="shell">
+      <NavBar active={active} onReselect={reselect} inboxCount={unread.data ?? 0} />
+      <main className={'id' in route ? 'screen screen--push' : 'screen'} key={key}>
+        {screenFor(route)}
+      </main>
+    </div>
   );
 }

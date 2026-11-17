@@ -2,17 +2,62 @@ import { useEffect, useState } from 'react';
 
 export const TABS = ['tonight', 'diwaniya', 'league', 'inbox', 'me'] as const;
 export type Tab = (typeof TABS)[number];
-export type Route = { name: Tab } | { name: 'welcome' };
 
-/** Parse a hash like "#/league" into a route; unknown paths go to Tonight. */
+export type Route =
+  | { name: Tab }
+  | { name: 'welcome' }
+  | { name: 'place'; id: string } // S6 Diwaniya page (pushed from Tonight, Diwaniya or Inbox)
+  | { name: 'settings'; id: string } // S9 Diwaniya settings (host)
+  | { name: 'score'; id: string; table?: string } // S10 Score a game (full screen)
+  | { name: 'player'; id: string }; // S12 Player profile
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Parse a hash like "#/league" or "#/d/<uuid>" into a route; anything unknown or malformed goes to Tonight. */
 export function parseHash(hash: string): Route {
-  const path = hash.replace(/^#\/?/, '').split(/[/?]/)[0];
-  if (path === 'welcome') return { name: 'welcome' };
-  return { name: (TABS as readonly string[]).includes(path) ? (path as Tab) : 'tonight' };
+  const [path, query = ''] = hash.replace(/^#\/?/, '').split('?');
+  const parts = path.split('/').filter(Boolean);
+  const head = parts[0] ?? '';
+  const id = parts[1] ?? '';
+  if (head === 'welcome') return { name: 'welcome' };
+  if (UUID.test(id)) {
+    if (head === 'd') return { name: 'place', id };
+    if (head === 'settings') return { name: 'settings', id };
+    if (head === 'player') return { name: 'player', id };
+    if (head === 'score') {
+      const table = new URLSearchParams(query).get('table');
+      return table && UUID.test(table) ? { name: 'score', id, table } : { name: 'score', id };
+    }
+  }
+  return { name: (TABS as readonly string[]).includes(head) ? (head as Tab) : 'tonight' };
 }
 
-export function hrefFor(name: Route['name']): string {
+export function hrefFor(name: Tab | 'welcome'): string {
   return `#/${name}`;
+}
+
+export const href = {
+  place: (id: string) => `#/d/${id}`,
+  settings: (id: string) => `#/settings/${id}`,
+  score: (id: string, table?: string) => (table ? `#/score/${id}?table=${table}` : `#/score/${id}`),
+  player: (id: string) => `#/player/${id}`,
+};
+
+/** Which tab a pushed screen belongs to, so the bar keeps its pill on the tab the user came from. */
+export function tabOf(r: Route, from: Tab = 'tonight'): Tab {
+  switch (r.name) {
+    case 'welcome':
+      return 'tonight';
+    case 'place':
+      return from === 'diwaniya' || from === 'inbox' ? from : 'tonight';
+    case 'settings':
+    case 'score':
+      return 'diwaniya';
+    case 'player':
+      return from === 'league' || from === 'diwaniya' || from === 'tonight' ? from : 'league';
+    default:
+      return r.name;
+  }
 }
 
 export function useRoute(): Route {
@@ -23,4 +68,14 @@ export function useRoute(): Route {
     return () => window.removeEventListener('hashchange', on);
   }, []);
   return route;
+}
+
+export function go(to: string) {
+  window.location.hash = to;
+}
+
+/** Back within the app when there is history, else to the screen's parent. */
+export function back(fallback: string) {
+  if (window.history.length > 1) window.history.back();
+  else go(fallback);
 }
