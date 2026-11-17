@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:sql": "python3 scripts/sql_test.py",
+    "seed:mock": "python3 scripts/sql_test.py supabase/seed/mock_pilot.sql",
     "typecheck": "tsc -b"
   },
   "dependencies": {

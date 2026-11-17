@@ -1,6 +1,7 @@
 -- Behaviour and access tests for the Diwaniya Tonight core schema
--- (supabase/migrations/20261117182827_core_schema.sql). One transaction that always rolls
--- back. Users are acted out with request.jwt.claims under role authenticated.
+-- (supabase/migrations/20261117182827_core_schema.sql + 20261117192322_signin_men_only.sql). One transaction that always rolls
+-- back. Users are acted out with request.jwt.claims under role authenticated. Visibility checks are
+-- scoped to this test's own diwaniya, so the mock pilot data (supabase/seed/mock_pilot.sql) can stay on dev.
 -- Run: python3 scripts/sql_test.py
 begin;
 
@@ -30,7 +31,7 @@ begin
   exception when insufficient_privilege then null; end;
   begin perform 1 from public.nights limit 1; raise exception 'FAIL: anon read nights';
   exception when insufficient_privilege then null; end;
-  begin perform public.complete_profile('x', 'y', date '1990-01-01', true); raise exception 'FAIL: anon RPC';
+  begin perform public.complete_profile('x', 'y', date '1990-01-01', true, true); raise exception 'FAIL: anon RPC';
   exception when insufficient_privilege then null; end;
   begin perform 1 from public.league_standings limit 1; raise exception 'FAIL: anon read standings';
   exception when insufficient_privilege then null; end;
@@ -49,22 +50,22 @@ declare
 begin
   -- 1. profile: age gate, terms, once-only birth date
   perform pg_temp.act(Y);
-  begin perform public.complete_profile('Young', 'Salmiya', (current_date - interval '16 years')::date, true);
+  begin perform public.complete_profile('Young', 'Salmiya', (current_date - interval '16 years')::date, true, true);
     raise exception 'FAIL: under-age profile accepted';
   exception when sqlstate '22023' then null; end;
   perform pg_temp.act(H);
-  begin perform public.complete_profile('Hamad', 'Rawda', date '1980-05-01', false);
+  begin perform public.complete_profile('Hamad', 'Rawda', date '1980-05-01', false, true);
     raise exception 'FAIL: profile without terms accepted';
   exception when sqlstate '22023' then null; end;
-  begin perform public.complete_profile(E'\u0007 ', 'Rawda', date '1980-05-01', true);
+  begin perform public.complete_profile(E'\u0007 ', 'Rawda', date '1980-05-01', true, true);
     raise exception 'FAIL: blank name accepted';
   exception when sqlstate '22023' then null; end;
   foreach u in array array[H, C, G, R, S, B, N] loop
     perform pg_temp.act(u);
-    perform public.complete_profile('P' || right(u::text, 2), 'Rawda', date '1990-01-01', true);
+    perform public.complete_profile('P' || right(u::text, 2), 'Rawda', date '1990-01-01', true, true);
   end loop;
   perform pg_temp.act(G);
-  perform public.complete_profile('Ghanim', 'Jabriya', date '2001-01-01', true);
+  perform public.complete_profile('Ghanim', 'Jabriya', date '2001-01-01', true, true);
   select count(*) into v_cnt from public.profile_private;
   if v_cnt <> 1 then raise exception 'FAIL: saw % private rows', v_cnt; end if;
   if (select birth_date from public.profile_private) <> date '1990-01-01' then
@@ -192,7 +193,7 @@ begin
   exception when insufficient_privilege then null; end;
   begin insert into public.seats (table_id, seat_no, walk_in_name) values (t_kout, 1, 'X'); raise exception 'FAIL: stranger placed a seat';
   exception when insufficient_privilege then null; end;
-  if (select count(*) from public.seats) <> 2 then raise exception 'FAIL: S cannot see live seats'; end if;
+  if (select count(*) from public.seats where table_id in (t_kout, t_bal)) <> 2 then raise exception 'FAIL: S cannot see live seats'; end if;
   perform pg_temp.act(H);
   insert into public.seats (table_id, seat_no, walk_in_name) values (t_kout, 1, 'Uncle Saad');
 
@@ -231,9 +232,9 @@ begin
   exception when insufficient_privilege then null; end;
   perform pg_temp.act(B);
   if (select status from public.requests where id = q_b) <> 'declined' then raise exception 'FAIL: blocked request still open'; end if;
-  if exists (select 1 from public.follows) then raise exception 'FAIL: blocked follow kept'; end if;
+  if exists (select 1 from public.follows where diwaniya_id = v_d) then raise exception 'FAIL: blocked follow kept'; end if;
   if exists (select 1 from public.diwaniyas where id = v_d) then raise exception 'FAIL: blocked sees diwaniya'; end if;
-  if exists (select 1 from public.nights) or exists (select 1 from public.seats) then raise exception 'FAIL: blocked sees night'; end if;
+  if exists (select 1 from public.nights where diwaniya_id = v_d) or exists (select 1 from public.seats where table_id in (t_kout, t_bal)) then raise exception 'FAIL: blocked sees night'; end if;
   if exists (select 1 from public.profiles where id = H) then raise exception 'FAIL: blocked sees host profile'; end if;
   if exists (select 1 from public.blocks) then raise exception 'FAIL: blocked sees the block row'; end if;
   begin perform public.request_seat(v_n, null, 0, '', true); raise exception 'FAIL: blocked requested';
@@ -246,11 +247,11 @@ begin
   update public.diwaniyas set visibility = 'followers' where id = v_d;
   perform pg_temp.act(N);
   if not exists (select 1 from public.diwaniyas where id = v_d) then raise exception 'FAIL: N cannot see the diwaniya card'; end if;
-  if exists (select 1 from public.nights) or exists (select 1 from public.game_tables) then raise exception 'FAIL: N sees followers-only night'; end if;
+  if exists (select 1 from public.nights where diwaniya_id = v_d) or exists (select 1 from public.game_tables where night_id = v_n) then raise exception 'FAIL: N sees followers-only night'; end if;
   begin perform public.request_seat(v_n, null, 0, '', true); raise exception 'FAIL: N requested followers-only';
   exception when sqlstate 'P0002' then null; end;
   perform pg_temp.act(S);
-  if not exists (select 1 from public.nights) then raise exception 'FAIL: follower lost the night'; end if;
+  if not exists (select 1 from public.nights where diwaniya_id = v_d) then raise exception 'FAIL: follower lost the night'; end if;
 
   -- 13. league: members score, strangers can't; undo; season table and stats
   perform pg_temp.act(S);
@@ -279,13 +280,13 @@ begin
     raise exception 'FAIL: stats %', v_j; end if;
   if (public.player_stats(R)->>'no_shows')::int <> 0 then raise exception 'FAIL: corrected no-show still counted'; end if;
   perform pg_temp.act(B);
-  if exists (select 1 from public.league_standings) then raise exception 'FAIL: blocked sees league'; end if;
+  if exists (select 1 from public.league_standings where diwaniya_id = v_d) then raise exception 'FAIL: blocked sees league'; end if;
   perform pg_temp.act(S);
   begin perform public.undo_game(v_game); raise exception 'FAIL: stranger undid';
   exception when sqlstate 'P0002' then null; end;
   perform pg_temp.act(H);
   perform public.undo_game(v_game);
-  if exists (select 1 from public.league_standings) then raise exception 'FAIL: undone game still counts'; end if;
+  if exists (select 1 from public.league_standings where diwaniya_id = v_d) then raise exception 'FAIL: undone game still counts'; end if;
 
   -- 14. reports are private to the reporter; inbox is own-only
   perform pg_temp.act(G);
