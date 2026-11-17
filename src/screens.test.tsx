@@ -185,7 +185,9 @@ describe('pure helpers', () => {
 describe('screens', () => {
   it('Tonight signed out teaches and never calls the API', () => {
     withAll(<Tonight />, { ...ready, status: 'signedOut', userId: null, profile: null, priv: null });
-    expect(screen.getByRole('heading', { name: 'No open seats near you tonight' })).toBeTruthy();
+    // Vi's 1/3 note: signed out it must not claim there are no seats; it says sign-in shows them.
+    expect(screen.getByRole('heading', { name: "Tonight's seats show once you sign in" })).toBeTruthy();
+    expect(screen.queryByText('No open seats near you tonight')).toBeNull();
     expect(api.listTonight).not.toHaveBeenCalled();
   });
   it('Tonight lists open nights with their seat rings and filters by game', async () => {

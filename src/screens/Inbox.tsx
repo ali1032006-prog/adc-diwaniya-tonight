@@ -1,4 +1,4 @@
-import { Bell, CheckCircle, Lightning, XCircle, UserPlus, Warning, Prohibit, Megaphone } from '@phosphor-icons/react';
+import { Bell, CheckCircle, Lightning, XCircle, UserPlus, Warning, Prohibit, Megaphone, UserGear, ShieldWarning } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
 import { EmptyState } from '../components/EmptyState';
@@ -19,11 +19,15 @@ const ICON: Record<InboxKind, Icon> = {
   need_one: Lightning,
   no_show: Warning,
   announcement: Megaphone,
+  cohost_invite: UserGear,
+  held: ShieldWarning,
 };
 
 /** Where an inbox item leads: hosts to their board, guests to the diwaniya page. */
 export function inboxTarget(i: Pick<InboxRow, 'kind' | 'diwaniya_id'>): string {
   if (i.kind === 'request' || i.kind === 'auto_approved' || i.kind === 'cancelled') return hrefFor('diwaniya');
+  if (i.kind === 'cohost_invite') return hrefFor('me');
+  if (i.kind === 'held') return hrefFor('admin');
   return i.diwaniya_id ? href.place(i.diwaniya_id) : hrefFor('tonight');
 }
 
@@ -97,7 +101,7 @@ function InboxBody() {
                   <Glyph size={22} weight="fill" aria-hidden="true" />
                 </span>
                 <span className="inbox__text">
-                  <bdi>{c.inbox.kinds[i.kind](i.diwaniya?.name ?? t.appName)}</bdi>
+                  <bdi>{c.inbox.kinds[i.kind](i.diwaniya?.name ?? (i.kind === 'held' && i.body ? i.body : t.appName))}</bdi>
                   {i.kind === 'announcement' && i.body && (
                     <bdi className="inbox__body">{i.body}</bdi>
                   )}

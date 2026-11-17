@@ -80,7 +80,17 @@ export interface ProfilePrivate {
   quiet_end: string | null;
   ping_daily_cap: number;
 }
-export type InboxKind = 'request' | 'approved' | 'declined' | 'auto_approved' | 'cancelled' | 'need_one' | 'no_show' | 'announcement';
+export type InboxKind =
+  | 'request'
+  | 'approved'
+  | 'declined'
+  | 'auto_approved'
+  | 'cancelled'
+  | 'need_one'
+  | 'no_show'
+  | 'announcement'
+  | 'cohost_invite'
+  | 'held';
 export interface InboxRow {
   id: string;
   kind: InboxKind;
@@ -199,7 +209,13 @@ export async function exportMyData(): Promise<Record<string, unknown>> {
     requests: await pick('requests', 'user_id'),
     follows: await pick('follows', 'user_id'),
     blocks: await pick('blocks', 'blocker_id'),
-    reports: await pick('reports', 'reporter_id'),
+    // Only the columns a reporter may read (ADC-SEC-19): never who reviewed it or the admin's note.
+    reports: unwrap(
+      await db()
+        .from('reports')
+        .select('id,target_user,target_diwaniya,target_label,reason,details,status,created_at,reviewed_at')
+        .eq('reporter_id', me),
+    ),
     inbox: await pick('inbox', 'user_id'),
     push_devices: unwrap(await db().from('push_subscriptions').select('endpoint,created_at,last_ok_at').eq('user_id', me)),
   };
@@ -324,7 +340,7 @@ export async function myDiwaniyas(): Promise<Diwaniya[]> {
   const me = await uid();
   const [own, co] = await Promise.all([
     db().from('diwaniyas').select(DW_FULL).eq('host_id', me).order('created_at'),
-    db().from('cohosts').select(`diwaniya:diwaniyas(${DW_FULL})`).eq('user_id', me),
+    db().from('cohosts').select(`diwaniya:diwaniyas(${DW_FULL})`).eq('user_id', me).not('accepted_at', 'is', null),
   ]);
   const a = unwrap(own) as unknown as Diwaniya[];
   const b = (unwrap(co) as unknown as { diwaniya: Diwaniya | null }[]).map((r) => r.diwaniya).filter((d): d is Diwaniya => !!d);
@@ -412,12 +428,35 @@ export async function removeRegular(diwaniyaId: string, userId: string) {
 
 export async function listCohosts(diwaniyaId: string) {
   return unwrap(
-    await db().from('cohosts').select('user_id,profile:profiles(display_name)').eq('diwaniya_id', diwaniyaId),
-  ) as unknown as { user_id: string; profile: { display_name: string } | null }[];
+    await db().from('cohosts').select('user_id,accepted_at,profile:profiles(display_name)').eq('diwaniya_id', diwaniyaId),
+  ) as unknown as { user_id: string; accepted_at: string | null; profile: { display_name: string } | null }[];
 }
 
+/** Invites the host sends; the person becomes a co-host only when he accepts (ADC-SEC-18). */
 export async function addCohost(diwaniyaId: string, userId: string) {
   unwrap(await db().from('cohosts').insert({ diwaniya_id: diwaniyaId, user_id: userId }));
+}
+
+export type CohostInvite = { diwaniya_id: string; invited_at: string; diwaniya: { name: string; area: string } | null };
+export async function myCohostInvites(): Promise<CohostInvite[]> {
+  const me = await uid();
+  return unwrap(
+    await db()
+      .from('cohosts')
+      .select('diwaniya_id,invited_at,diwaniya:diwaniyas(name,area)')
+      .eq('user_id', me)
+      .is('accepted_at', null)
+      .order('invited_at', { ascending: false }),
+  ) as unknown as CohostInvite[];
+}
+
+export async function acceptCohost(diwaniyaId: string) {
+  unwrap(await db().rpc('accept_cohost', { p_diwaniya: diwaniyaId }));
+}
+
+export async function declineCohost(diwaniyaId: string) {
+  const me = await uid();
+  unwrap(await db().from('cohosts').delete().eq('diwaniya_id', diwaniyaId).eq('user_id', me));
 }
 
 export async function removeCohost(diwaniyaId: string, userId: string) {
@@ -621,6 +660,8 @@ export interface QueueItem {
   reviewed_at: string | null;
   review_note: string;
   target_label: string;
+  /** The reporter has a real link to the target (ADC-SEC-20); only these count toward a hold. */
+  counts_to_hold?: boolean;
   reporter: { id: string | null; name: string | null };
   target_user: { id: string; name: string; hidden_at: string | null; held_at: string | null; open_reports: number } | null;
   target_diwaniya: { id: string; name: string; area: string; hidden_at: string | null; held_at: string | null; open_reports: number } | null;

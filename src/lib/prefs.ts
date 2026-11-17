@@ -45,9 +45,14 @@ export function errorText(e: unknown, c: Copy): string {
   if (code === 'offline' || (e instanceof TypeError && /fetch/i.test(e.message))) return c.errors.offline;
   if (code === '28000' || code === 'PGRST301') return c.errors.signIn;
   if (code === 'P0002' || code === 'PGRST116') return c.errors.notFound;
+  const msg = e instanceof ApiError ? e.message : '';
+  if (/under review/i.test(msg)) return c.errors.underReview;
   if (code === '42501') return c.errors.forbidden;
   if (code === '23514') return c.errors.cap;
+  if (code === '54000' && /this night/i.test(msg)) return c.errors.nightTries;
+  if (code === '54000' && /wait a few minutes/i.test(msg)) return c.errors.slowDown;
   if (code === '54000') return c.errors.limit;
+  if (code === '22023' && /not at this diwaniya/i.test(msg)) return c.errors.notThere;
   if (code === '23505') return c.errors.duplicate;
   if (code === '22023' || code === '22P02' || code === '23502') return c.errors.invalid;
   return c.errors.unknown;

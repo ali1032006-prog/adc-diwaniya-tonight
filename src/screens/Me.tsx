@@ -1,12 +1,25 @@
 import { useEffect, useState } from 'react';
-import { UserCircle, DownloadSimple, SignOut, BellRinging, ShieldCheck, Trash, CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { UserCircle, DownloadSimple, SignOut, BellRinging, ShieldCheck, Trash, CaretLeft, CaretRight, UserGear } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
 import { ProfileSetup } from '../components/account';
 import { Chips, ErrorNote, Field, OkNote } from '../components/ui';
 import { usePrefs, type Theme } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { useAction, useAsync } from '../lib/useAsync';
-import { GAMES, amIAdmin, deleteMyAccount, exportMyData, listBlocked, unblock, updatePrivate, updateProfile, type Game } from '../lib/api';
+import {
+  GAMES,
+  acceptCohost,
+  amIAdmin,
+  declineCohost,
+  deleteMyAccount,
+  exportMyData,
+  listBlocked,
+  myCohostInvites,
+  unblock,
+  updatePrivate,
+  updateProfile,
+  type Game,
+} from '../lib/api';
 import { pushState, type PushState } from '../lib/push';
 import type { Lang, Numerals } from '../lib/i18n';
 import { href, hrefFor } from '../lib/router';
@@ -213,6 +226,7 @@ function AccountPanels() {
           {row(c.me.maleConfirmed, date(priv.male_confirmed_at))}
         </dl>
       </section>
+      <CohostInvites />
 
       <form
         className="panel"
@@ -394,5 +408,54 @@ function AccountPanels() {
         </button>
       </form>
     </>
+  );
+}
+
+/** Co-host invites wait here until the person accepts or declines (ADC-SEC-18). Hidden when there are none. */
+function CohostInvites() {
+  const { c, date, err } = usePrefs();
+  const s = useSession();
+  const invites = useAsync(myCohostInvites, [], ['inbox']);
+  const act = useAction();
+  const list = invites.data ?? [];
+  if (list.length === 0) return null;
+  const answer = (fn: () => Promise<unknown>) =>
+    void act.run(async () => {
+      await fn();
+      invites.reload();
+      await s.refresh();
+    });
+  return (
+    <section className="panel" aria-labelledby="me-invites">
+      <h2 id="me-invites" className="panel__title">
+        <UserGear size={18} aria-hidden="true" /> {c.me.invitesTitle}
+      </h2>
+      <p className="muted">{c.me.invitesBody}</p>
+      {act.error != null && <ErrorNote text={err(act.error)} />}
+      <ul className="people">
+        {list.map((i) => (
+          <li key={i.diwaniya_id}>
+            <span>
+              <bdi>{i.diwaniya?.name ?? '؟'}</bdi>
+              {i.diwaniya?.area && (
+                <span className="muted small">
+                  {' · '}
+                  <bdi>{i.diwaniya.area}</bdi>
+                </span>
+              )}
+              <span className="muted small"> · {date(i.invited_at)}</span>
+            </span>
+            <span className="row">
+              <button type="button" className="btn btn--primary btn--small" disabled={act.busy} onClick={() => answer(() => acceptCohost(i.diwaniya_id))}>
+                {c.me.accept}
+              </button>
+              <button type="button" className="btn btn--quiet btn--small" disabled={act.busy} onClick={() => answer(() => declineCohost(i.diwaniya_id))}>
+                {c.me.decline}
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

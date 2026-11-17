@@ -148,8 +148,11 @@ begin
   begin perform public.announce(v_n, 'sixth'); raise exception 'FAIL: sixth announcement';
   exception when sqlstate '54000' then null; end;
 
-  -- 5. partner / rival stats: H and G beat R1 and X
+  -- 5. partner / rival stats: H and G beat R1 and X (R1 approved tonight, X a regular: games name
+  --    only people who were really there, ADC-SEC-18)
   perform pg_temp.act(H);
+  perform public.decide_request((select id from public.requests where night_id = v_n and user_id = R1), true);
+  insert into public.regulars (diwaniya_id, user_id) values (v_d, X);
   perform public.record_game(v_d, 'kout_bo4', v_t, jsonb_build_array(
     jsonb_build_object('seat', 1, 'user_id', H, 'name', 'h', 'team', 1, 'points', 152, 'won', true),
     jsonb_build_object('seat', 2, 'user_id', R1, 'name', 'r', 'team', 2, 'points', 80, 'won', false),
@@ -192,7 +195,10 @@ begin
   exception when sqlstate '42501' then null; end;
   if public.am_i_admin() then raise exception 'FAIL: G is admin'; end if;
 
-  -- 7. three different people reporting holds the diwaniya from everyone else
+  -- 7. three different linked people reporting holds the diwaniya from everyone else (R2, R3
+  --    regulars; G and R1 approved there; ADC-SEC-20)
+  perform pg_temp.act(H);
+  insert into public.regulars (diwaniya_id, user_id) values (v_d, R2), (v_d, R3);
   perform pg_temp.act(R1); insert into public.reports (target_diwaniya, reason) values (v_d, 'fake');
   perform pg_temp.act(R1); insert into public.reports (target_diwaniya, reason) values (v_d, 'fake');
   reset role;

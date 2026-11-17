@@ -161,7 +161,10 @@ function ReportCard({ item, onDone }: { item: QueueItem; onDone: () => void }) {
           </dd>
         </div>
         {(u || d) && <p className="muted small">{c.admin.openCount((u ?? d)!.open_reports, fmt)}</p>}
-        <p className="muted small">{c.admin.from(item.reporter?.name ?? c.admin.deleted)}</p>
+        <p className="muted small">
+          {c.admin.from(item.reporter?.name ?? c.admin.deleted)}
+          {item.counts_to_hold != null && <> · {item.counts_to_hold ? c.admin.linked : c.admin.unlinked}</>}
+        </p>
       </dl>
       {item.details && (
         <blockquote className="report-card__details">

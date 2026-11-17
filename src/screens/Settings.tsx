@@ -205,6 +205,7 @@ function SettingsBody({ id }: { id: string }) {
               <a className="link" href={href.player(r.user_id)}>
                 <bdi>{r.profile?.display_name ?? '؟'}</bdi>
               </a>
+              {!r.accepted_at && <span className="tag tag--saffron">{c.settings.invited}</span>}
               {(host || r.user_id === userId) && (
                 <button type="button" className="btn btn--text btn--small" disabled={act.busy} onClick={() => save(() => removeCohost(id, r.user_id))}>
                   {c.common.remove}

@@ -39,8 +39,8 @@ function NeedsAccountOrTeach({ children }: { children: React.ReactNode }) {
     return (
       <EmptyState
         art={<SeatRing game="kout" seats={[null, null, null, null, null, null]} size={132} decorative />}
-        title={t.tonight.emptyTitle}
-        body={`${t.tonight.emptyBody} ${c.gate.title}.`}
+        title={c.tonight.guestTitle}
+        body={c.tonight.guestBody}
         actions={[
           { label: c.gate.signIn, href: href.signin('signin', 'tonight'), primary: true },
           { label: t.tonight.openYours, href: hrefFor('diwaniya') },

@@ -92,6 +92,8 @@ begin
   insert into public.cohosts (diwaniya_id, user_id) values (v_d, C);
   insert into public.regulars (diwaniya_id, user_id) values (v_d, R);
   perform set_config('test.d', v_d::text, true);
+  perform pg_temp.act(C);  -- co-hosts are invited and accept (ADC-SEC-18)
+  perform public.accept_cohost(v_d);
 
   perform pg_temp.act(G);
   update public.diwaniyas set name = 'Hijacked' where id = v_d;
