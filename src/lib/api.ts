@@ -31,7 +31,6 @@ export interface DiwaniyaLite {
   usual_slot: string;
   host_id: string;
   visibility: 'public' | 'followers';
-  audience: 'all' | 'men' | 'women' | 'families';
 }
 export interface Diwaniya extends DiwaniyaLite {
   about: string;
@@ -71,6 +70,7 @@ export interface Profile {
 export interface ProfilePrivate {
   birth_date: string;
   terms_accepted_at: string;
+  male_confirmed_at: string;
   lang: 'ar' | 'en';
   numerals: 'auto' | 'arab' | 'latn';
   theme: 'auto' | 'night' | 'day';
@@ -145,7 +145,7 @@ async function uid(): Promise<string> {
 const SEATS = 'seats(seat_no,user_id,walk_in_name,profile:profiles(display_name))';
 const QUEUE = 'queue:table_queue(user_id,joined_at,profile:profiles(display_name))';
 const TABLES = `tables:game_tables(id,game,seat_count,label,queue_mode,need_one,${SEATS},${QUEUE})`;
-const DW_LITE = 'id,name,area,usual_slot,host_id,visibility,audience';
+const DW_LITE = 'id,name,area,usual_slot,host_id,visibility';
 const DW_FULL = `${DW_LITE},about,rules,approval,guest_cap,pin_unlock_minutes,host:profiles!diwaniyas_host_id_fkey(display_name)`;
 
 function sortTables(n: NightRow): NightRow {
@@ -163,8 +163,17 @@ export async function getMe(): Promise<{ profile: Profile | null; priv: ProfileP
   return { profile: unwrap(p) as Profile | null, priv: unwrap(q) as ProfilePrivate | null };
 }
 
-export async function completeProfile(name: string, area: string, birthDate: string, acceptTerms: boolean) {
-  unwrap(await db().rpc('complete_profile', { p_name: name, p_area: area, p_birth_date: birthDate, p_accept_terms: acceptTerms }));
+/** S3: the server checks 18+ (ruling B) and the male confirmation (ruling C) again; the form only helps. */
+export async function completeProfile(name: string, area: string, birthDate: string, acceptTerms: boolean, confirmMale: boolean) {
+  unwrap(
+    await db().rpc('complete_profile', {
+      p_name: name,
+      p_area: area,
+      p_birth_date: birthDate,
+      p_accept_terms: acceptTerms,
+      p_confirm_male: confirmMale,
+    }),
+  );
 }
 
 export async function updateProfile(p: Partial<Pick<Profile, 'display_name' | 'area' | 'games'>>) {
@@ -172,7 +181,7 @@ export async function updateProfile(p: Partial<Pick<Profile, 'display_name' | 'a
   unwrap(await db().from('profiles').update(p).eq('id', me));
 }
 
-export async function updatePrivate(p: Partial<Omit<ProfilePrivate, 'birth_date' | 'terms_accepted_at'>>) {
+export async function updatePrivate(p: Partial<Omit<ProfilePrivate, 'birth_date' | 'terms_accepted_at' | 'male_confirmed_at'>>) {
   const me = await uid();
   unwrap(await db().from('profile_private').update(p).eq('user_id', me));
 }

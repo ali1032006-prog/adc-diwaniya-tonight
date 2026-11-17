@@ -15,14 +15,15 @@ npm install
 npm test        # vitest
 npm run build   # tsc + production build into dist/
 npm run test:sql  # SQL behaviour + RLS tests against the dev project (needs SUPABASE_ENV_FILE)
-SUPABASE_ENV_FILE=<env file> python3 scripts/live_smoke.py  # src/lib/api.ts end to end on dev with two throwaway accounts, deleted after
+SUPABASE_ENV_FILE=<env file> python3 scripts/live_smoke.py  # src/lib/api.ts end to end on dev with two throwaway accounts, deleted after (opens the email provider for the run only, then closes it)
+SUPABASE_ENV_FILE=<env file> npm run seed:mock  # re-create the mock pilot data on dev (ruling F); tonight's nights get today's date
 ```
 
 The app reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from a git-ignored `.env.local` at build time. The publishable key is meant for browsers; RLS and the RPCs guard the data.
 
-## Screens (slice 3, wired to the schema)
+## Screens
 
-`src/lib/api.ts` holds every read and write; `src/lib/session.tsx` holds the Supabase session and profile. Hash routes: `#/tonight` (S5), `#/d/<id>` Diwaniya page with the request sheet (S6/S7) and report sheet (S15), `#/diwaniya` host board and followed list (S8), `#/settings/<id>` (S9), `#/score/<id>?table=<id>` full-screen scoring (S10), `#/league` (S11), `#/player/<id>` (S12), `#/inbox` (S13), `#/me` detailed settings (S14). Seats, requests, queues and the inbox refresh live through Realtime. Signed out, every screen teaches and shows that accounts open soon; the sign-in screen (S2) waits on ruling A.
+`src/lib/api.ts` holds every read and write; `src/lib/session.tsx` holds the Supabase session and profile. Hash routes: `#/welcome` (S1), `#/signin?mode=signin|register` (S2), `#/terms`, `#/tonight` (S5), `#/d/<id>` Diwaniya page with the request sheet (S6/S7) and report sheet (S15), `#/diwaniya` host board and followed list (S8), `#/settings/<id>` (S9), `#/score/<id>?table=<id>` full-screen scoring (S10), `#/league` (S11), `#/player/<id>` (S12), `#/inbox` (S13), `#/me` detailed settings (S14). Seats, requests, queues and the inbox refresh live through Realtime. Signed out, every screen teaches what it shows and offers Sign in / New account.
 
 ## Database (Supabase dev `diwaniya-tonight-dev`)
 
@@ -31,12 +32,14 @@ The app reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from a git
 - The core loop runs through RPCs (`request_seat`, `decide_request`, `cancel_request`, `check_in`, `mark_request`, `set_need_one`, `record_game`, `undo_game`, `player_stats`, `complete_profile`), each checking the caller itself. Requests, inbox items and need-one flags cannot be written directly.
 - Blocking someone declines their open requests at your diwaniyas, drops their follow and hides your diwaniya, nights, seats, league and profile from them, both ways.
 - `supabase/tests/core_test.sql` acts out host, co-host, guest, regular, stranger, blocked and under-age users in one rolled-back transaction.
-- Waiting on Ali's rulings: B minimum age (`private.min_age()`, 18 for now), C audience (`diwaniyas.audience`, default `all`), D moderation (reports are write-only until then).
+- Ali's rulings (ADC-LOG-696/697): A Google sign-in only; B 18 and over (`private.min_age()`, checked in `complete_profile`); C every diwaniya is men only (no audience setting; `profile_private.male_confirmed_at` records each user's confirmation); D reports go to Ali (write-only for users; the moderation queue comes in a later slice); F mock pilot data only (`supabase/seed/mock_pilot.sql`).
+- `supabase/tests/signin_test.sql` covers rulings B and C: no profile without the male confirmation, 17 refused and 18 accepted, the confirmation not editable, no audience column.
 
 ## Notes
 
 - Assets and licences: `ASSET-LICENSES.md`. Fonts are bundled from npm and served from our own origin; no Google Fonts, no CDN scripts.
 - Security headers and CSP: `public/_headers`.
 - Design notes for each review round live in `.impeccable/` (direction contract, audit-r<N>.md, polish-r<N>.md).
-- Sign-in waits on Ali's ruling A (Google sign-in or an approved mail sender); nothing that sends email ships without an approved sender.
+- Sign-in (S2, `#/signin`, `src/screens/SignIn.tsx`) is Google only, through Supabase Auth with PKCE: the person comes back to the same page with a one-time `?code=` that the client swaps for a session, then `src/lib/auth.ts` tidies the address bar and returns to the screen that asked. Register asks the date of birth (18+), the male confirmation and the Terms before Google; profile setup (S3) asks them again and the server enforces them. The email provider is closed on the project (`external_email_enabled: false`), so there is no password or email form and nothing sends mail. Terms and Privacy: `#/terms`.
+- Google button: Google's own "G" from its Sign in with Google asset bundle, with the colours and padding of its branding guidelines (see `ASSET-LICENSES.md`). The callback URL `https://<ref>.supabase.co/auth/v1/callback` must be an Authorized redirect URI on the Google OAuth client.
 - Merges to `main` happen only after review round 3/3, Jayce's sign-off, Vi's QA Pass and Ambessa's confirmation that Ali approved the project.

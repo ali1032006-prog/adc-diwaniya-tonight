@@ -6,7 +6,9 @@ import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { useAction } from '../lib/useAsync';
 import { completeProfile, openSeats, type TableRow } from '../lib/api';
-import { hrefFor } from '../lib/router';
+import { currentFrom, href } from '../lib/router';
+import { clearPendingRegister, isAdult, pendingRegister } from '../lib/auth';
+import { BirthField, ConsentChecks } from './consent';
 
 /** A table's seats in ring order, open ones as null, mine marked. */
 export function ringSeats(t: TableRow, me: string | null): Seat[] {
@@ -37,28 +39,38 @@ export function TableRing({ table, size = 96 }: { table: TableRow; size?: number
   );
 }
 
-/** Shown where an account is needed while sign-in waits on its method (ruling A). */
+/** Shown where an account is needed: what it unlocks, then Sign in or New account (Google only). */
 export function SignInGate() {
-  const { c, t } = usePrefs();
+  const { c } = usePrefs();
+  const from = currentFrom();
   return (
     <EmptyState
       art={<SeatRing game="kout" seats={[{ initials: 'ض' }, null, null, { initials: 'م' }, null, null]} size={120} decorative />}
       title={c.gate.title}
       body={c.gate.body}
-      actions={[{ label: t.welcome.lookAround, href: hrefFor('tonight'), primary: true }]}
+      actions={[
+        { label: c.gate.signIn, href: href.signin('signin', from), primary: true },
+        { label: c.gate.register, href: href.signin('register', from) },
+      ]}
     />
   );
 }
 
-/** S3 profile setup: name, area, birth date for the age gate, consent. */
+/**
+ * S3 profile setup: name and area, plus the age (18+, ruling B), the male confirmation (ruling C)
+ * and the Terms. What the Register tab collected before Google is filled in; the server checks all of it.
+ */
 export function ProfileSetup() {
   const { c, err } = usePrefs();
   const { refresh } = useSession();
   const act = useAction();
+  const [pending] = useState(() => pendingRegister());
   const [name, setName] = useState('');
   const [area, setArea] = useState('');
-  const [birth, setBirth] = useState('');
-  const [terms, setTerms] = useState(false);
+  const [birth, setBirth] = useState(pending?.birth ?? '');
+  const [male, setMale] = useState(pending?.male ?? false);
+  const [terms, setTerms] = useState(pending?.terms ?? false);
+  const ready = name.trim() !== '' && area.trim() !== '' && isAdult(birth) && male && terms;
   return (
     <section className="panel" aria-labelledby="setup-t">
       <h2 id="setup-t" className="panel__title panel__title--ink">
@@ -69,8 +81,10 @@ export function ProfileSetup() {
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
+          if (!ready) return;
           void act.run(async () => {
-            await completeProfile(name, area, birth, terms);
+            await completeProfile(name, area, birth, terms, male);
+            clearPendingRegister();
             await refresh();
           });
         }}
@@ -81,15 +95,10 @@ export function ProfileSetup() {
         <Field label={c.profile.area} hint={c.profile.areaHint}>
           <input className="input" required maxLength={60} value={area} onChange={(e) => setArea(e.target.value)} />
         </Field>
-        <Field label={c.profile.birth} hint={c.profile.tooYoung}>
-          <input className="input" type="date" required value={birth} onChange={(e) => setBirth(e.target.value)} />
-        </Field>
-        <label className="check">
-          <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} required />
-          <span>{c.profile.terms}</span>
-        </label>
+        <BirthField value={birth} onChange={setBirth} />
+        <ConsentChecks male={male} terms={terms} onMale={setMale} onTerms={setTerms} />
         {act.error != null && <ErrorNote text={err(act.error)} />}
-        <button className="btn btn--primary" disabled={act.busy}>
+        <button className="btn btn--primary" disabled={act.busy || !ready}>
           {c.profile.finish}
         </button>
       </form>

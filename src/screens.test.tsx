@@ -44,6 +44,7 @@ const ready: SessionCtx = {
   priv: {
     birth_date: '1990-01-01',
     terms_accepted_at: '2026-11-01T10:00:00Z',
+    male_confirmed_at: '2026-11-01T10:00:00Z',
     lang: 'en',
     numerals: 'auto',
     theme: 'auto',
@@ -66,7 +67,7 @@ function night(over: Partial<NightRow> = {}): NightRow {
     id: NIGHT,
     starts_at: '2026-11-17T18:30:00Z',
     status: 'open',
-    diwaniya: { id: DW, name: 'Diwaniya Al-Bahar', area: 'Salmiya', usual_slot: '', host_id: 'h', visibility: 'public', audience: 'all' },
+    diwaniya: { id: DW, name: 'Diwaniya Al-Bahar', area: 'Salmiya', usual_slot: '', host_id: 'h', visibility: 'public' },
     tables: [table()],
     ...over,
   };
@@ -192,7 +193,7 @@ describe('screens', () => {
       night(),
       night({
         id: 'n2',
-        diwaniya: { id: 'd2', name: 'Baloot House', area: 'Jahra', usual_slot: '', host_id: 'h2', visibility: 'followers', audience: 'all' },
+        diwaniya: { id: 'd2', name: 'Baloot House', area: 'Jahra', usual_slot: '', host_id: 'h2', visibility: 'followers' },
         tables: [table({ id: 't2', game: 'baloot', seat_count: 4, need_one: true })],
       }),
     ]);
@@ -216,7 +217,7 @@ describe('screens', () => {
   });
   it('Board approves a pending request through decide_request', async () => {
     api.myDiwaniyas.mockResolvedValue([
-      { id: DW, name: 'Diwaniya Al-Bahar', area: 'Salmiya', usual_slot: '', host_id: ME, visibility: 'public', audience: 'all', about: '', rules: '', approval: 'host', guest_cap: 4, pin_unlock_minutes: 60 },
+      { id: DW, name: 'Diwaniya Al-Bahar', area: 'Salmiya', usual_slot: '', host_id: ME, visibility: 'public', about: '', rules: '', approval: 'host', guest_cap: 4, pin_unlock_minutes: 60 },
     ]);
     api.listFollowed.mockResolvedValue([]);
     api.getOpenNight.mockResolvedValue(night({ diwaniya: null }));

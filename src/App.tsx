@@ -10,14 +10,15 @@ import { Settings } from './screens/Settings';
 import { Score } from './screens/Score';
 import { Player } from './screens/Player';
 import { Welcome } from './screens/Welcome';
+import { SignIn } from './screens/SignIn';
+import { Terms } from './screens/Terms';
 import { PrefsContext, loadPrefs, savePrefs, type Prefs } from './lib/prefs';
 import { SessionProvider, useSession } from './lib/session';
 import { useAsync } from './lib/useAsync';
 import { unreadCount } from './lib/api';
 import { dirFor, STRINGS } from './lib/i18n';
-import { TABS, tabOf, useRoute, type Route, type Tab } from './lib/router';
+import { TABS, WELCOMED, tabOf, useRoute, type Route, type Tab } from './lib/router';
 
-const WELCOMED = 'dt.welcomed.v1';
 
 function screenFor(route: Route): React.JSX.Element {
   switch (route.name) {
@@ -27,6 +28,10 @@ function screenFor(route: Route): React.JSX.Element {
       return <Settings id={route.id} />;
     case 'score':
       return <Score id={route.id} table={route.table} />;
+    case 'signin':
+      return <SignIn mode={route.mode} from={route.from} />;
+    case 'terms':
+      return <Terms />;
     case 'player':
       return <Player id={route.id} />;
     case 'diwaniya':
@@ -84,7 +89,7 @@ function Shell() {
 
   // First open goes to Welcome once; after that the app opens on Tonight.
   useEffect(() => {
-    if (!localStorage.getItem(WELCOMED) && route.name !== 'welcome') window.location.hash = '#/welcome';
+    if (!localStorage.getItem(WELCOMED) && !['welcome', 'signin', 'terms'].includes(route.name)) window.location.hash = '#/welcome';
   }, [route.name]);
 
   // Tapping the active tab returns to the top of its root (instant under reduced motion).
@@ -95,6 +100,7 @@ function Shell() {
 
   if (route.name === 'welcome') return <Welcome onDone={() => localStorage.setItem(WELCOMED, '1')} />;
   const key = route.name + ('id' in route ? route.id : '');
+  const pushed = 'id' in route || route.name === 'signin' || route.name === 'terms';
   // Score a game is full screen: the bar steps aside for the room.
   if (route.name === 'score') {
     return (
@@ -106,7 +112,7 @@ function Shell() {
   return (
     <div className="shell">
       <NavBar active={active} onReselect={reselect} inboxCount={unread.data ?? 0} />
-      <main className={'id' in route ? 'screen screen--push' : 'screen'} key={key}>
+      <main className={pushed ? 'screen screen--push' : 'screen'} key={key}>
         {screenFor(route)}
       </main>
     </div>

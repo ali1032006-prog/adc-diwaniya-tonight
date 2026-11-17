@@ -8,6 +8,7 @@ import { useSession } from '../lib/session';
 import { useAction, useAsync } from '../lib/useAsync';
 import { GAMES, exportMyData, listBlocked, unblock, updatePrivate, updateProfile, type Game } from '../lib/api';
 import type { Lang, Numerals } from '../lib/i18n';
+import { href, hrefFor } from '../lib/router';
 
 function Segmented<T extends string>({
   name,
@@ -67,6 +68,17 @@ export function Me() {
               <p className="account__body">{t.me.guestBody}</p>
             </div>
           </div>
+          <div className="actions-row">
+            <a className="btn btn--primary" href={href.signin('signin', 'me')}>
+              {c.gate.signIn}
+            </a>
+            <a className="btn btn--quiet" href={href.signin('register', 'me')}>
+              {c.gate.register}
+            </a>
+          </div>
+          <a className="btn btn--text" href={hrefFor('terms')}>
+            {c.signin.readTerms}
+          </a>
         </section>
       )}
       <section className="panel" aria-labelledby="me-prefs">
@@ -179,10 +191,12 @@ function AccountPanels() {
           </div>
         </div>
         <dl className="info">
-          {row(c.me.signIn, s.provider ?? '—')}
+          {row(c.me.signIn, s.provider === 'google' ? 'Google' : (s.provider ?? '—'))}
           {row(c.me.email, s.email ?? '—')}
           {row(c.me.birth, date(`${priv.birth_date}T12:00:00+03:00`))}
           {row(c.me.memberSince, date(profile.created_at))}
+          {row(c.me.termsAccepted, date(priv.terms_accepted_at))}
+          {row(c.me.maleConfirmed, date(priv.male_confirmed_at))}
         </dl>
       </section>
 

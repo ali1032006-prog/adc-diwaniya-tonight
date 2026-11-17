@@ -41,7 +41,10 @@ function NeedsAccountOrTeach({ children }: { children: React.ReactNode }) {
         art={<SeatRing game="kout" seats={[null, null, null, null, null, null]} size={132} decorative />}
         title={t.tonight.emptyTitle}
         body={`${t.tonight.emptyBody} ${c.gate.title}.`}
-        actions={[{ label: t.tonight.openYours, href: hrefFor('diwaniya'), primary: true }]}
+        actions={[
+          { label: c.gate.signIn, href: href.signin('signin', 'tonight'), primary: true },
+          { label: t.tonight.openYours, href: hrefFor('diwaniya') },
+        ]}
       />
     );
   }
@@ -64,7 +67,10 @@ function TonightList() {
         art={<SeatRing game="kout" seats={[null, null, null, null, null, null]} size={132} decorative />}
         title={t.tonight.emptyTitle}
         body={t.tonight.emptyBody}
-        actions={[{ label: t.tonight.openYours, href: hrefFor('diwaniya'), primary: true }]}
+        actions={[
+          { label: c.gate.signIn, href: href.signin('signin', 'tonight'), primary: true },
+          { label: t.tonight.openYours, href: hrefFor('diwaniya') },
+        ]}
       />
     );
   }

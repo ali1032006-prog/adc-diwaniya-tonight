@@ -1859,3 +1859,230 @@ fieldset.panel {
     opacity: 1;
   }
 }
+
+/* ---------- S2 Sign in and Register (Google only), Terms ---------- */
+
+/* Google's button colours (branding guidelines, "Create a custom button"): dark on night wool,
+   light on day; the "G" is Google's own file and keeps its colours and 20px size. */
+:root {
+  --gsi-fill: #131314;
+  --gsi-stroke: #8e918f;
+  --gsi-ink: #e3e3e3;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='night']) {
+    --gsi-fill: #ffffff;
+    --gsi-stroke: #747775;
+    --gsi-ink: #1f1f1f;
+  }
+}
+:root[data-theme='day'] {
+  --gsi-fill: #ffffff;
+  --gsi-stroke: #747775;
+  --gsi-ink: #1f1f1f;
+}
+
+.gsi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--gsi-stroke);
+  background: var(--gsi-fill);
+  color: var(--gsi-ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: transform 150ms var(--ease-standard), opacity 150ms var(--ease-standard);
+}
+.gsi-btn__g {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.gsi-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.gsi-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.gsi-btn[aria-busy='true'] {
+  opacity: 0.8;
+  cursor: progress;
+}
+.gsi-btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+@media (hover: hover) {
+  .gsi-btn:hover:not(:disabled) {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  }
+}
+
+.signin {
+  max-width: 520px;
+  width: 100%;
+  margin-inline: auto;
+}
+.signin__art {
+  display: grid;
+  place-items: center;
+  padding-block: 4px;
+}
+.signin__lead {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.signin__done {
+  justify-items: start;
+}
+
+/* Two tabs, one pill that slides between them (transform only; mirrored in RTL by --dir). */
+.signin__tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+}
+.signin__tab-pill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  inset-inline-start: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: var(--madder);
+  transform: translateX(0);
+  transition: transform 250ms var(--ease-standard);
+  will-change: transform;
+}
+.signin__tabs[data-active='register'] .signin__tab-pill {
+  transform: translateX(calc(100% * var(--dir)));
+}
+.signin__tab {
+  position: relative;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 150ms var(--ease-standard);
+}
+.signin__tab[aria-selected='true'] {
+  color: var(--madder-ink);
+}
+.signin__tab:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.signin__panel {
+  animation: fade-up 220ms var(--ease-enter) both;
+}
+.signin__how {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+.signin__how-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--camel);
+}
+.signin__how-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.signin__how-list li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.signin__how-list svg {
+  margin-top: 2px;
+  color: var(--saffron-ink);
+}
+
+.consent {
+  display: grid;
+  gap: 8px;
+}
+.consent a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--saffron);
+}
+.field__hint--error {
+  color: var(--ink);
+  font-weight: 600;
+}
+.input--date {
+  max-width: 260px;
+}
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.actions-row .btn {
+  flex: 1 1 140px;
+}
+.welcome__actions {
+  gap: 12px;
+}
+
+.terms {
+  max-width: 68ch;
+  width: 100%;
+  margin-inline: auto;
+}
+.terms__section {
+  display: grid;
+  gap: 6px;
+}
+.terms__h {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+.terms__p {
+  color: var(--ink-muted);
+  line-height: 1.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signin__tab-pill {
+    transition: none;
+  }
+  .signin__panel {
+    animation: fade-in 120ms linear both;
+  }
+  .gsi-btn,
+  .gsi-btn:active:not(:disabled) {
+    transition: opacity 120ms linear;
+    transform: none;
+  }
+}

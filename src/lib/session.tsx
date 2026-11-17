@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { supabase } from './supabase';
 import { getMe, type Profile, type ProfilePrivate } from './api';
+import { finishReturn } from './auth';
 
 export type SessionStatus = 'loading' | 'offline' | 'signedOut' | 'needsProfile' | 'ready';
 
@@ -32,8 +33,8 @@ export function useSession() {
 }
 
 /**
- * Holds the Supabase session and the signed-in person's profile. The sign-in screen itself
- * waits on Ali's ruling A (method); everything here works for any method Supabase Auth offers.
+ * Holds the Supabase session and the signed-in person's profile. Sign-in is Google only (ruling A);
+ * getSession waits for the client to swap Google's one-time code, then the address bar is tidied.
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const client = supabase();
@@ -54,6 +55,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     inflight.current = (async () => {
       try {
         const { data } = await client.auth.getSession();
+        finishReturn();
         const user = data.session?.user;
         if (!user) {
           setState({ status: 'signedOut', userId: null, email: null, provider: null, profile: null, priv: null });

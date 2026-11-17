@@ -33,8 +33,8 @@ describe.skipIf(!PASS)('api.ts against dev (host + guest)', () => {
     expect(H.id).not.toBe(G.id);
 
     // S3 profiles
-    await H.api.completeProfile('Smoke Host', 'Salmiya', '1985-05-05', true);
-    await G.api.completeProfile('Smoke Guest', 'Jabriya', '1995-05-05', true);
+    await H.api.completeProfile('Smoke Host', 'Salmiya', '1985-05-05', true, true);
+    await G.api.completeProfile('Smoke Guest', 'Jabriya', '1995-05-05', true, true);
     expect((await G.api.getMe()).profile?.display_name).toBe('Smoke Guest');
 
     // S8/S9 host opens a diwaniya and a night that started 10 minutes ago

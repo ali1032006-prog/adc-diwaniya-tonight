@@ -3,11 +3,11 @@ import { SeatRing } from '../components/SeatRing';
 import { WovenBand } from '../components/WovenBand';
 import { DallahArt, ScoreSheetArt } from '../components/Art';
 import { usePrefs } from '../lib/prefs';
-import { hrefFor } from '../lib/router';
+import { href, hrefFor } from '../lib/router';
 
 /** S1 Welcome: three short panels and a language switch. Sign-in joins once its method is ruled. */
 export function Welcome({ onDone }: { onDone: () => void }) {
-  const { t, prefs, setPrefs } = usePrefs();
+  const { t, c, prefs, setPrefs } = usePrefs();
   const [i, setI] = useState(0);
   const panels = t.welcome.panels;
   const art = [
@@ -43,9 +43,14 @@ export function Welcome({ onDone }: { onDone: () => void }) {
       </div>
       <div className="welcome__actions">
         {last ? (
-          <a className="btn btn--primary" href={hrefFor('tonight')} onClick={onDone}>
-            {t.welcome.lookAround}
-          </a>
+          <>
+            <a className="btn btn--primary" href={href.signin('register', 'tonight')} onClick={onDone}>
+              {c.gate.register}
+            </a>
+            <a className="btn btn--quiet" href={hrefFor('tonight')} onClick={onDone}>
+              {t.welcome.lookAround}
+            </a>
+          </>
         ) : (
           <button type="button" className="btn btn--primary" onClick={() => setI(i + 1)}>
             {t.welcome.next}
