@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Warning } from '@phosphor-icons/react';
 import { usePrefs } from '../lib/prefs';
 import { ageOn, isAdult, maxBirthDate } from '../lib/auth';
 import { hrefFor } from '../lib/router';
@@ -25,6 +26,7 @@ export function BirthField({ value, onChange }: { value: string; onChange: (v: s
         autoComplete="bday"
       />
       <span id={hintId} className={problem ? 'field__hint field__hint--error' : 'field__hint'} aria-live="polite">
+        {problem && <Warning size={16} weight="fill" aria-hidden="true" />}
         {problem ?? c.profile.tooYoung}
       </span>
     </label>

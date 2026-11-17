@@ -2086,3 +2086,36 @@ fieldset.panel {
     transform: none;
   }
 }
+
+/* Wide screens: the seat ring and "how signing in works" sit beside the form instead of a long column. */
+@media (min-width: 1024px) {
+  .screen__body.signin {
+    max-width: 960px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-auto-flow: row dense;
+    column-gap: 56px;
+    align-items: start;
+  }
+  .screen__body.signin > * {
+    grid-column: 2;
+  }
+  .screen__body.signin > .signin__art {
+    grid-column: 1;
+    grid-row: 1;
+    padding-block: 24px 8px;
+  }
+  .screen__body.signin > .signin__how {
+    grid-column: 1;
+    grid-row: 2 / span 4;
+  }
+}
+.field__hint--error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.field__hint--error svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--madder);
+}
