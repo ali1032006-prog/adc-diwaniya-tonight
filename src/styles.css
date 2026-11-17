@@ -2046,10 +2046,9 @@ fieldset.panel {
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--saffron);
-  /* Inline in the sentence, but a 24px-tall hit box all the same (WCAG 2.5.8), without moving the line. */
+  /* Stays inline in the sentence (an inline-block broke the line at 320); vertical padding on an inline
+     box grows its 24px hit area (WCAG 2.5.8) without changing the line height. */
   padding-block: 2px;
-  margin-block: -2px;
-  display: inline-block;
 }
 .field__hint--error {
   color: var(--ink);

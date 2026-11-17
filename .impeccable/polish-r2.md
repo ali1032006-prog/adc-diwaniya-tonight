@@ -37,7 +37,7 @@ Colour, imagery and icons
 - New inbox kinds use Phosphor `UserGear` and `ShieldWarning`, fill weight, like the rest of the inbox; no new colours.
 
 Interaction and state
-- Terms link inside the consent sentence: 24px hit box (2px block padding with matching negative margin, inline-block) so the line height doesn't change.
+- Terms link inside the consent sentence: 24px hit box from 2px vertical padding on the inline link, so the line height doesn't change. A first try with inline-block pushed the whole link onto its own line at 320 (seen on preview 5db4bdb8) and was dropped.
 - Accept/Decline disable while the answer is in flight and refresh the session, so an accepted diwaniya appears on the Diwaniya tab at once.
 - Motion: no new animation this round (animate.md: nothing here needs motion to explain state; the panel arrives with the screen's existing entrance). Lazy screens show the shared skeleton while their chunk loads, no spinner.
 
