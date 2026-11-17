@@ -118,6 +118,8 @@ h2 {
 .shell {
   min-height: 100dvh;
   padding-block-end: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  /* The 12px screen-in slide must never widen the page (in RTL it runs past the left edge). */
+  overflow-x: clip;
 }
 
 .screen {
@@ -644,6 +646,7 @@ h2 {
   max-width: 560px;
   margin-inline: auto;
   text-align: center;
+  overflow-x: clip;
 }
 
 .welcome__band {
