@@ -2399,6 +2399,20 @@ fieldset.panel {
 .people__row {
   flex-wrap: wrap;
 }
+/* Co-host invites on Me: the diwaniya reads first, the two answers sit together and drop under it
+   on narrow phones instead of squeezing the name. */
+.invite {
+  padding-block: 10px;
+}
+.invite__what {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.invite__actions {
+  flex: 0 0 auto;
+  gap: 8px;
+}
 .people__row .link {
   flex: 1 1 auto;
   min-width: 0;

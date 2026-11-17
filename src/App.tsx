@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavBar } from './components/NavBar';
 import { Tonight } from './screens/Tonight';
 import { Board } from './screens/Board';
@@ -6,14 +6,9 @@ import { League } from './screens/League';
 import { Inbox } from './screens/Inbox';
 import { Me } from './screens/Me';
 import { Place } from './screens/Place';
-import { Settings } from './screens/Settings';
-import { Score } from './screens/Score';
-import { Player } from './screens/Player';
 import { Welcome } from './screens/Welcome';
 import { SignIn } from './screens/SignIn';
-import { Terms } from './screens/Terms';
-import { Pings } from './screens/Pings';
-import { Admin } from './screens/Admin';
+import { Skeleton } from './components/ui';
 import { PrefsContext, loadPrefs, savePrefs, type Prefs } from './lib/prefs';
 import { SessionProvider, useSession } from './lib/session';
 import { useAsync } from './lib/useAsync';
@@ -21,6 +16,14 @@ import { unreadCount } from './lib/api';
 import { dirFor, STRINGS } from './lib/i18n';
 import { TABS, WELCOMED, tabOf, useRoute, type Route, type Tab } from './lib/router';
 
+// Screens most visits never open load on demand, so the first paint carries less script
+// (impeccable audit r1/r2 P2: one 740 kB chunk).
+const Settings = lazy(() => import('./screens/Settings').then((m) => ({ default: m.Settings })));
+const Score = lazy(() => import('./screens/Score').then((m) => ({ default: m.Score })));
+const Player = lazy(() => import('./screens/Player').then((m) => ({ default: m.Player })));
+const Terms = lazy(() => import('./screens/Terms').then((m) => ({ default: m.Terms })));
+const Pings = lazy(() => import('./screens/Pings').then((m) => ({ default: m.Pings })));
+const Admin = lazy(() => import('./screens/Admin').then((m) => ({ default: m.Admin })));
 
 function screenFor(route: Route): React.JSX.Element {
   switch (route.name) {
@@ -111,7 +114,7 @@ function Shell() {
   if (route.name === 'score') {
     return (
       <main className="screen screen--full" key={key}>
-        {screenFor(route)}
+        <Suspense fallback={<Skeleton rows={4} />}>{screenFor(route)}</Suspense>
       </main>
     );
   }
@@ -119,7 +122,7 @@ function Shell() {
     <div className="shell">
       <NavBar active={active} onReselect={reselect} inboxCount={unread.data ?? 0} />
       <main className={pushed ? 'screen screen--push' : 'screen'} key={key}>
-        {screenFor(route)}
+        <Suspense fallback={<Skeleton rows={4} />}>{screenFor(route)}</Suspense>
       </main>
     </div>
   );

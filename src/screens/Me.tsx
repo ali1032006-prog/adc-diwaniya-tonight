@@ -434,8 +434,8 @@ function CohostInvites() {
       {act.error != null && <ErrorNote text={err(act.error)} />}
       <ul className="people">
         {list.map((i) => (
-          <li key={i.diwaniya_id}>
-            <span>
+          <li key={i.diwaniya_id} className="people__row invite">
+            <span className="invite__what">
               <bdi>{i.diwaniya?.name ?? '؟'}</bdi>
               {i.diwaniya?.area && (
                 <span className="muted small">
@@ -445,7 +445,7 @@ function CohostInvites() {
               )}
               <span className="muted small"> · {date(i.invited_at)}</span>
             </span>
-            <span className="row">
+            <span className="row invite__actions">
               <button type="button" className="btn btn--primary btn--small" disabled={act.busy} onClick={() => answer(() => acceptCohost(i.diwaniya_id))}>
                 {c.me.accept}
               </button>
