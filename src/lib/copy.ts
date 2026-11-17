@@ -111,7 +111,7 @@ const ar = {
       },
       {
         h: 'الأمان',
-        p: 'يمكنك الإبلاغ عن أي شخص أو ديوانية وحظره. البلاغات تصل إلى مالك التطبيق، وله أن يخفي الحسابات أو الديوانيات المخالفة. إذا أبلغ ثلاثة أشخاص مختلفين عن الشخص أو الديوانية نفسها، يُوقف ظهورها في «الليلة» حتى يراجعها المالك.',
+        p: 'يمكنك الإبلاغ عن أي شخص أو ديوانية وحظره. البلاغات تصل إلى مالك التطبيق، وله أن يخفي الحسابات أو الديوانيات المخالفة. إذا أبلغ ثلاثة أشخاص مختلفين يعرفون الشخص أو الديوانية نفسها (حضروا عندها أو لعبوا معه)، يُوقف ظهورها في «الليلة» حتى يراجعها المالك. ومن يُخفى حسابه لا يستطيع فتح حساب جديد بحساب Google نفسه.',
       },
       {
         h: 'بياناتك',
@@ -456,7 +456,7 @@ const ar = {
       noShows: 'غياب في ٧ أيام',
       byReason: 'المفتوحة حسب السبب',
     },
-    rule: 'ثلاثة مبلّغين مختلفين يوقفون اللاعب أو الديوانية عن «الليلة» حتى تراجعها.',
+    rule: 'ثلاثة مبلّغين مختلفين ممن يعرفونه (حضور أو لعب مشترك) يوقفون اللاعب أو الديوانية عن «الليلة» حتى تراجعها.',
   },
 };
 
@@ -560,7 +560,7 @@ const en: Copy = {
       },
       {
         h: 'Safety',
-        p: "You can report and block any person or diwaniya. Reports go to the app's owner, who may hide accounts or diwaniyas that break these Terms. When three different people report the same person or diwaniya, it is held off Tonight until the owner reviews it.",
+        p: "You can report and block any person or diwaniya. Reports go to the app's owner, who may hide accounts or diwaniyas that break these Terms. When three different people who know the same person or diwaniya (they were there, or played with him) report it, it is held off Tonight until the owner reviews it. Someone whose account is hidden can't open a new one with the same Google account.",
       },
       {
         h: 'Your data',
@@ -900,7 +900,7 @@ const en: Copy = {
       noShows: 'No-shows in 7 days',
       byReason: 'Open by reason',
     },
-    rule: 'Three different reporters hold a player or a diwaniya off Tonight until you review it.',
+    rule: 'Three different reporters who know them (were there, or played together) hold a player or a diwaniya off Tonight until you review it.',
   },
 };
 

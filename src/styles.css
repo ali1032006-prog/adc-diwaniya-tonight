@@ -689,6 +689,10 @@ h2 {
   /* Two lines reserved: while Readex Pro loads, the fallback face wraps the headline differently;
      a fixed box means the swap can't move anything (ADC-TSK-37, CLS 0.114 at 390). */
   min-height: calc(2 * 1.3em);
+  /* A one-line headline sits at the foot of its box, next to the line it introduces. */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .welcome__body {
@@ -2042,6 +2046,10 @@ fieldset.panel {
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--saffron);
+  /* Inline in the sentence, but a 24px-tall hit box all the same (WCAG 2.5.8), without moving the line. */
+  padding-block: 2px;
+  margin-block: -2px;
+  display: inline-block;
 }
 .field__hint--error {
   color: var(--ink);

@@ -1,0 +1,55 @@
+# Impeccable polish, round 2/3 (ADC-TSK-36, Diwaniya Tonight v1)
+
+Run by hand from `reference/polish.md`, with `reference/craft-floor.md` read before the edits and `reference/animate.md` for the motion check. Input: `audit-r2.md`, Jayce's round 1/3 findings ADC-SEC-16..20 (ADC-LOG-738), Vi's round 1/3 close (ADC-LOG-745: ADC-TSK-37 and the signed-out Tonight note). No critique snapshot exists (the critique-storage helper is not installed). Commits: 5726d15 (fixes), 9b8d644 (lazy screens, invite rows) and the commit that carries these notes. Checked on previews 74fed652 and 50b4de69.
+
+## 1. Establish the system
+
+Read `.impeccable/direction.md` (woven night, live seat ring), ADC-RES-50, `ui.tsx`, `account.tsx`, `EmptyState`, `styles.css` tokens. Drift classified:
+- missing token: none (the new UI uses `tag--saffron`, `btn--primary`, `btn--quiet`, `--hairline`, `muted`);
+- one-off implementation: none; the invites panel is a `panel` with the shared `people` list and the `people__row` wrap from r1;
+- conceptual mismatch: co-host invites live on Me (account things live there) and are announced in the Inbox, matching how pings and admin were placed in r1; the invited state sits in Settings next to the co-host it belongs to;
+- local defects: the audit list.
+
+## 2. Gather the evidence
+
+Signed out, on the preview, myself: first-run welcome (all three panels), register and sign-in, every tab's wall, Terms, Admin and Pings walls, at the 9 sizes, Arabic default. Welcome font trace at 390 with 4x CPU + Slow 4G (3 runs) and with the webfont blocked vs loaded on both builds. Signed in: not rendered this round (Agent Issue 52 hold, no accounts); the states were walked in code and in jsdom (`src/r2.test.tsx`): invites list, accept, empty (panel absent), inbox `cohost_invite` and `held` rows with their targets, the four new refusal sentences.
+
+## 3. Triage
+
+1. Broken or blocked tasks: none in the UI. On the server, unhiding a person left his diwaniyas hidden (fixed in the r2 migration).
+2. Missing or misleading states: signed-out Tonight claimed no seats (fixed); new refusals needed their own words (added); invites needed an empty state (the panel simply isn't there without one).
+3. Flow, hierarchy, responsive: invite rows at 320; Terms link hit box.
+4. Visual and motion: welcome shift on font swap (ADC-TSK-37).
+5. Code and asset cleanup: the entry chunk.
+
+## 4. Polish the whole path
+
+Flow and hierarchy
+- Co-host is now an invitation: the host's button reads "Invite as co-host" and confirms "Invite sent. He becomes a co-host once he accepts."; Settings marks a pending one "Invite waiting"; the invitee gets one inbox item ("Invite to co-host <diwaniya>", leads to Me) and answers on Me in a panel that says what a co-host sees before he accepts.
+- The admin gets "On hold after reports: <name>. Review it in the report queue." the moment a hold starts (leads to the queue), and each queue item says whether the reporter has a real link ("Knows them: counts toward a hold" / "No link to them: does not count toward a hold").
+- Refusals name the rule and the way out: under review; two tries a night (try another diwaniya or night); slow down for a few minutes; a player who wasn't there (type him as a walk-in).
+
+Layout and type
+- Welcome: title reserves two lines (line-height 1.3, min-height 2 x 1.3em) and body two lines (2 x 1.6em); a one-line headline sits at the foot of its box (flex end), next to the line it introduces, so the extra room falls between the art and the headline, not between headline and body.
+- Invite rows wrap: the diwaniya, area and date take the line (`flex: 1 1 12rem`, `overflow-wrap: anywhere`), Accept and Decline stay together and drop beneath on narrow phones; 10px block padding like the other people rows.
+
+Colour, imagery and icons
+- New inbox kinds use Phosphor `UserGear` and `ShieldWarning`, fill weight, like the rest of the inbox; no new colours.
+
+Interaction and state
+- Terms link inside the consent sentence: 24px hit box (2px block padding with matching negative margin, inline-block) so the line height doesn't change.
+- Accept/Decline disable while the answer is in flight and refresh the session, so an accepted diwaniya appears on the Diwaniya tab at once.
+- Motion: no new animation this round (animate.md: nothing here needs motion to explain state; the panel arrives with the screen's existing entrance). Lazy screens show the shared skeleton while their chunk loads, no spinner.
+
+Content and code
+- Signed-out Tonight: "Tonight's seats show once you sign in" + why (hosts' homes stay private) instead of "No open seats near you tonight"; actions unchanged.
+- Terms (ar/en) and the admin queue's rule line now say the hold counts only reporters who know the person or diwaniya, and that a hidden account can't come back with the same Google account; nothing beyond what the SQL does.
+- My-data export lists the report columns a reporter may read instead of `*` (ADC-SEC-19); without it the export would now fail on the column grant.
+- Settings, Score, Player, Terms, Pings and Admin load on demand (`React.lazy` + `Suspense` with the shared `Skeleton`): no chunk passes 600 kB any more (entry 378 kB + shared 298 kB; the six screens 0.5-23 kB each). The icon-weight part of the bundle stays for its own slice (an icon component from `@phosphor-icons/core` is a dependency change Jayce should see on its own).
+
+## 5. Verify and finish
+
+- Gates on the notes commit: SQL tests core / signin / v1_complete / r2_fixes green on dev; vitest 75/75; `tsc -b` + production build; Semgrep p/default + p/owasp-top-ten + p/secrets 0 findings.
+- Multi-device: 10 signed-out routes x 9 sizes = 90/90 with no horizontal overflow and `innerWidth` equal to the emulated width; 0 unnamed controls; one h1 per route; no heading jumps. Screenshots looked at for welcome 320 and 390 and Tonight 1280.
+- Welcome: boxes fixed at 62.4 / 51.2 px under the fallback face and under Readex Pro; 3/3 throttled traces CLS 0 (this harness did not reproduce the old shift either, so Vi's trace is the confirmation).
+- Not done this round, recorded: the rendered signed-in look of the new UI (Agent Issue 52 hold, owed before the 2/3 handoff); the icon component (own dependency slice); motion-capture and the motion reviewer agent are not installed under ADC manual mode, so the one motion question (none added) was settled by reading the CSS and stepping the welcome panels.

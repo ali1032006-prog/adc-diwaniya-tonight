@@ -138,6 +138,7 @@ describe('welcome holds still while the font loads (ADC-TSK-37)', () => {
     const rule = (sel: string) => css.slice(css.indexOf(`${sel} {`), css.indexOf('}', css.indexOf(`${sel} {`)));
     expect(rule('.welcome__title')).toMatch(/min-height:\s*calc\(2 \* 1\.3em\)/);
     expect(rule('.welcome__title')).toMatch(/line-height:\s*1\.3/);
+    expect(rule('.welcome__title')).toMatch(/align-items:\s*flex-end/);
     expect(rule('.welcome__body')).toMatch(/min-height:\s*calc\(2 \* 1\.6em\)/);
   });
 });
