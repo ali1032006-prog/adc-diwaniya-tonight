@@ -56,7 +56,7 @@ declare
 begin
   foreach u in array array[H, G, A, R1, R2, R3, P, Q, X] loop
     perform pg_temp.act(u);
-    perform public.complete_profile('V' || right(u::text, 2), 'Qurtuba', date '1990-01-01', true, true);
+    perform public.complete_profile('V' || right(u::text, 2), 'Qurtuba', date '1990-01-01', true);
   end loop;
 
   -- 1. push subscriptions: RPC only, push-service hosts only, own rows only, 10 devices at most

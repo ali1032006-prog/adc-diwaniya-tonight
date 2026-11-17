@@ -34,7 +34,6 @@ export function maxBirthDate(today: Date = new Date()): string {
 
 export interface PendingRegister {
   birth: string;
-  male: boolean;
   terms: boolean;
 }
 
@@ -47,7 +46,7 @@ export function pendingRegister(): PendingRegister | null {
   try {
     const v = JSON.parse(sessionStorage.getItem(REGISTER) ?? 'null') as Partial<PendingRegister> | null;
     if (!v || typeof v.birth !== 'string') return null;
-    return { birth: v.birth, male: v.male === true, terms: v.terms === true };
+    return { birth: v.birth, terms: v.terms === true };
   } catch {
     return null;
   }

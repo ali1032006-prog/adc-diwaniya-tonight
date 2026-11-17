@@ -43,6 +43,7 @@ Interaction and state
 - Motion: no new animation this round (animate.md: nothing here needs motion to explain state; the panel arrives with the screen's existing entrance). Lazy screens show the shared skeleton while their chunk loads, no spinner.
 
 Content and code
+- Ali's order ADC-LOG-751 (arrived during this pass): the "I confirm I am a man" checkbox is gone from Register (S2), profile setup (S3) and its line in Me; the Register lead now reads "Two things before Google: your age and the Terms"; the Terms keep the men-only line (ruling C) and now say the account confirms 18+ and accepts the Terms. Server side in migration `20261117214325_no_male_checkbox.sql`.
 - Signed-out Tonight: "Tonight's seats show once you sign in" + why (hosts' homes stay private) instead of "No open seats near you tonight"; actions unchanged.
 - Terms (ar/en) and the admin queue's rule line now say the hold counts only reporters who know the person or diwaniya, and that a hidden account can't come back with the same Google account; nothing beyond what the SQL does.
 - My-data export lists the report columns a reporter may read instead of `*` (ADC-SEC-19); without it the export would now fail on the column grant.

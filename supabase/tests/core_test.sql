@@ -36,7 +36,7 @@ begin
   exception when insufficient_privilege then null; end;
   begin perform 1 from public.nights limit 1; raise exception 'FAIL: anon read nights';
   exception when insufficient_privilege then null; end;
-  begin perform public.complete_profile('x', 'y', date '1990-01-01', true, true); raise exception 'FAIL: anon RPC';
+  begin perform public.complete_profile('x', 'y', date '1990-01-01', true); raise exception 'FAIL: anon RPC';
   exception when insufficient_privilege then null; end;
   begin perform 1 from public.league_standings limit 1; raise exception 'FAIL: anon read standings';
   exception when insufficient_privilege then null; end;
@@ -55,22 +55,22 @@ declare
 begin
   -- 1. profile: age gate, terms, once-only birth date
   perform pg_temp.act(Y);
-  begin perform public.complete_profile('Young', 'Salmiya', (current_date - interval '16 years')::date, true, true);
+  begin perform public.complete_profile('Young', 'Salmiya', (current_date - interval '16 years')::date, true);
     raise exception 'FAIL: under-age profile accepted';
   exception when sqlstate '22023' then null; end;
   perform pg_temp.act(H);
-  begin perform public.complete_profile('Hamad', 'Rawda', date '1980-05-01', false, true);
+  begin perform public.complete_profile('Hamad', 'Rawda', date '1980-05-01', false);
     raise exception 'FAIL: profile without terms accepted';
   exception when sqlstate '22023' then null; end;
-  begin perform public.complete_profile(E'\u0007 ', 'Rawda', date '1980-05-01', true, true);
+  begin perform public.complete_profile(E'\u0007 ', 'Rawda', date '1980-05-01', true);
     raise exception 'FAIL: blank name accepted';
   exception when sqlstate '22023' then null; end;
   foreach u in array array[H, C, G, R, S, B, N] loop
     perform pg_temp.act(u);
-    perform public.complete_profile('P' || right(u::text, 2), 'Rawda', date '1990-01-01', true, true);
+    perform public.complete_profile('P' || right(u::text, 2), 'Rawda', date '1990-01-01', true);
   end loop;
   perform pg_temp.act(G);
-  perform public.complete_profile('Ghanim', 'Jabriya', date '2001-01-01', true, true);
+  perform public.complete_profile('Ghanim', 'Jabriya', date '2001-01-01', true);
   select count(*) into v_cnt from public.profile_private;
   if v_cnt <> 1 then raise exception 'FAIL: saw % private rows', v_cnt; end if;
   if (select birth_date from public.profile_private) <> date '1990-01-01' then

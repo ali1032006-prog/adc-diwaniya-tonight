@@ -223,7 +223,6 @@ function AccountPanels() {
           {row(c.me.birth, date(`${priv.birth_date}T12:00:00+03:00`))}
           {row(c.me.memberSince, date(profile.created_at))}
           {row(c.me.termsAccepted, date(priv.terms_accepted_at))}
-          {row(c.me.maleConfirmed, date(priv.male_confirmed_at))}
         </dl>
       </section>
       <CohostInvites />

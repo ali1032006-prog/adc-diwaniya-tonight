@@ -27,15 +27,14 @@ export function GoogleButton({ label, disabled, busy, busyLabel, onClick }: {
 
 /**
  * S2 Sign in and Register (ADC-RES-50; Ali's rulings A-C, ADC-LOG-696/697): one screen, two tabs.
- * Google is the only way in. Register asks the age (18+), the male confirmation and the Terms
- * first; profile setup after Google asks them again and the server checks them for real.
+ * Google is the only way in. Register asks the age (18+) and the Terms first (no male checkbox,
+ * Ali ADC-LOG-751); profile setup after Google asks them again and the server checks them for real.
  */
 export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: string }) {
   const { c, err } = usePrefs();
   const session = useSession();
   const [tab, setTab] = useState(mode);
   const [birth, setBirth] = useState('');
-  const [male, setMale] = useState(false);
   const [terms, setTerms] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +59,7 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
     setError(null);
     setBusy(true);
     try {
-      if (register) savePendingRegister({ birth, male, terms });
+      if (register) savePendingRegister({ birth, terms });
       localStorage.setItem(WELCOMED, '1');
       await startGoogle(from ? `#/${from}` : '#/tonight');
     } catch (e) {
@@ -69,7 +68,7 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
     }
   };
 
-  const ready = isAdult(birth) && male && terms;
+  const ready = isAdult(birth) && terms;
   const select = (next: 'signin' | 'register', focus = false) => {
     setTab(next);
 
@@ -149,7 +148,7 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
                   }}
                 >
                   <BirthField value={birth} onChange={setBirth} />
-                  <ConsentChecks male={male} terms={terms} onMale={setMale} onTerms={setTerms} />
+                  <ConsentChecks terms={terms} onTerms={setTerms} />
                   <GoogleButton
                     label={c.signin.googleUp}
                     disabled={!ready}

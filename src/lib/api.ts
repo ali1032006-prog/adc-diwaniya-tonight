@@ -70,7 +70,8 @@ export interface Profile {
 export interface ProfilePrivate {
   birth_date: string;
   terms_accepted_at: string;
-  male_confirmed_at: string;
+  /** Only on accounts made before ADC-LOG-751 removed the checkbox; kept, never asked again. */
+  male_confirmed_at: string | null;
   lang: 'ar' | 'en';
   numerals: 'auto' | 'arab' | 'latn';
   theme: 'auto' | 'night' | 'day';
@@ -174,15 +175,14 @@ export async function getMe(): Promise<{ profile: Profile | null; priv: ProfileP
   return { profile: unwrap(p) as Profile | null, priv: unwrap(q) as ProfilePrivate | null };
 }
 
-/** S3: the server checks 18+ (ruling B) and the male confirmation (ruling C) again; the form only helps. */
-export async function completeProfile(name: string, area: string, birthDate: string, acceptTerms: boolean, confirmMale: boolean) {
+/** S3: the server checks 18+ (ruling B) and the Terms again; the form only helps. No male checkbox (ADC-LOG-751). */
+export async function completeProfile(name: string, area: string, birthDate: string, acceptTerms: boolean) {
   unwrap(
     await db().rpc('complete_profile', {
       p_name: name,
       p_area: area,
       p_birth_date: birthDate,
       p_accept_terms: acceptTerms,
-      p_confirm_male: confirmMale,
     }),
   );
 }

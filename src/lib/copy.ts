@@ -57,7 +57,6 @@ const ar = {
     termsBefore: 'قرأت ',
     termsLink: 'الشروط وسياسة الخصوصية',
     termsAfter: ' وأوافق عليها.',
-    male: 'أؤكد أنني رجل. الديوانيات في ديوانية الليلة للرجال فقط.',
     finish: 'ابدأ',
     tooYoung: 'التطبيق لمن هم ١٨ سنة فأكثر.',
     badDate: 'اكتب تاريخ ميلاد صحيحاً.',
@@ -69,8 +68,8 @@ const ar = {
     tabRegister: 'حساب جديد',
     signInLead: 'أهلاً بعودتك',
     signInBody: 'ادخل بحساب Google الذي سجّلت به من قبل. إن كان حسابك جديداً فسنكمل ملفك بعد الدخول.',
-    registerLead: 'ثلاثة أمور قبل Google',
-    registerBody: 'عمرك، وتأكيد أنك رجل، وموافقتك على الشروط. بعدها تختار حسابك في Google.',
+    registerLead: 'أمران قبل Google',
+    registerBody: 'عمرك، وموافقتك على الشروط. بعدها تختار حسابك في Google.',
     google: 'تسجيل الدخول باستخدام Google',
     googleUp: 'الاشتراك باستخدام Google',
     opening: 'جارٍ فتح Google…',
@@ -91,7 +90,7 @@ const ar = {
     sections: [
       {
         h: 'لمن التطبيق',
-        p: 'ديوانية الليلة للرجال من عمر ١٨ سنة فأكثر، وكل الديوانيات فيه للرجال فقط. حين تنشئ حسابك تؤكد أنك رجل وأن عمرك ١٨ سنة أو أكثر، ونحفظ وقت هذا التأكيد.',
+        p: 'ديوانية الليلة للرجال من عمر ١٨ سنة فأكثر، وكل الديوانيات فيه للرجال فقط. حين تنشئ حسابك تؤكد أن عمرك ١٨ سنة أو أكثر وتوافق على هذه الشروط، ونحفظ وقت موافقتك.',
       },
       {
         h: 'الدخول',
@@ -334,7 +333,6 @@ const ar = {
     birth: 'تاريخ الميلاد',
     memberSince: 'عضو منذ',
     termsAccepted: 'وافقت على الشروط',
-    maleConfirmed: 'أكّدت أنك رجل',
     games: 'ألعابي',
     pings: 'التنبيهات',
     pingGames: 'نبّهني عن هذه الألعاب',
@@ -506,7 +504,6 @@ const en: Copy = {
     termsBefore: "I've read and accept the ",
     termsLink: 'Terms and Privacy Policy',
     termsAfter: '.',
-    male: 'I confirm I am a man. Diwaniyas on Diwaniya Tonight are for men only.',
     finish: 'Start',
     tooYoung: 'Diwaniya Tonight is for people aged 18 and over.',
     badDate: 'Enter a real date of birth.',
@@ -518,8 +515,8 @@ const en: Copy = {
     tabRegister: 'New account',
     signInLead: 'Welcome back',
     signInBody: "Sign in with the Google account you used before. If it's new to us, we'll finish your profile right after.",
-    registerLead: 'Three things before Google',
-    registerBody: 'Your age, that you are a man, and the Terms. Then you pick your Google account.',
+    registerLead: 'Two things before Google',
+    registerBody: 'Your age and the Terms. Then you pick your Google account.',
     google: 'Sign in with Google',
     googleUp: 'Sign up with Google',
     opening: 'Opening Google…',
@@ -540,7 +537,7 @@ const en: Copy = {
     sections: [
       {
         h: "Who it's for",
-        p: 'Diwaniya Tonight is for men aged 18 and over, and every diwaniya on it is for men only. When you create your account you confirm you are a man and at least 18, and we keep the time you confirmed it.',
+        p: 'Diwaniya Tonight is for men aged 18 and over, and every diwaniya on it is for men only. When you create your account you confirm you are at least 18 and accept these Terms, and we keep the time you accepted them.',
       },
       {
         h: 'Signing in',
@@ -783,7 +780,6 @@ const en: Copy = {
     birth: 'Date of birth',
     memberSince: 'Member since',
     termsAccepted: 'Accepted the Terms',
-    maleConfirmed: 'Confirmed you are a man',
     games: 'My games',
     pings: 'Pings',
     pingGames: 'Ping me about these games',
