@@ -1798,9 +1798,10 @@ fieldset.panel {
   border-radius: 999px;
   background: var(--saffron);
   color: #15111a;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   line-height: 20px;
+  font-variant-numeric: tabular-nums;
   text-align: center;
 }
 
@@ -2384,9 +2385,9 @@ fieldset.panel {
 .report-card__details {
   margin: 0;
   padding: 10px 12px;
-  border-inline-start: 3px solid var(--camel);
+  border: 1px solid var(--hairline);
   background: var(--raised);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow-wrap: anywhere;
 }
 .people__row {
@@ -2407,6 +2408,7 @@ fieldset.panel {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  padding-block: 10px;
 }
 .link-row__main svg {
   flex: none;
@@ -2417,4 +2419,74 @@ fieldset.panel {
 a.link-row.panel {
   border: 1px solid var(--hairline);
   padding-block: 12px;
+}
+
+/* r1 polish */
+.inbox__item .inbox__text > bdi.inbox__body {
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+.played-with .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
+}
+.btn--wrap {
+  white-space: normal;
+  text-align: start;
+  border-radius: 16px;
+  padding-block: 8px;
+  line-height: 1.4;
+}
+.pings__actions .btn {
+  white-space: nowrap;
+  gap: 8px;
+}
+@media (max-width: 599px) {
+  .pings__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pings__actions .btn {
+    flex: none;
+  }
+}
+.panel[aria-labelledby],
+h2[id] {
+  scroll-margin-top: 96px;
+}
+.admin__panel {
+  animation: fade-up 200ms var(--ease-enter) both;
+}
+.report-card--leaving {
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 180ms var(--ease-leave), transform 180ms var(--ease-leave);
+}
+.bell--ring {
+  transform-origin: 50% 10%;
+  animation: bell-ring 520ms var(--ease-standard) 1;
+}
+@keyframes bell-ring {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(14deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(8deg); }
+  80% { transform: rotate(-4deg); }
+}
+.report-card__reason {
+  font-size: 1rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin__panel {
+    animation: fade-in 120ms linear both;
+  }
+  .report-card--leaving {
+    transform: none;
+    transition: opacity 120ms linear;
+  }
+  .bell--ring {
+    animation: none;
+  }
 }

@@ -31,6 +31,7 @@ function PingsBody() {
   const [state, setState] = useState<PushState | null>(null);
   const devices = useAsync(pushDeviceCount, [state]);
   const act = useAction();
+  const [rang, setRang] = useState(false); // the bell rings once when pings come on, never on load
   useEffect(() => {
     let live = true;
     void pushState().then((s) => live && setState(s)).catch(() => live && setState('unsupported'));
@@ -61,19 +62,29 @@ function PingsBody() {
           {c.me.devicePings}
         </h2>
         <p className={`pings__state pings__state--${state ?? 'off'}`} aria-live="polite">
-          {state === 'on' ? <BellRinging size={22} weight="fill" aria-hidden="true" /> : <BellSlash size={22} aria-hidden="true" />}
+          {state === 'on' ? (
+            <BellRinging size={22} weight="fill" aria-hidden="true" className={rang ? 'bell bell--ring' : 'bell'} />
+          ) : (
+            <BellSlash size={22} aria-hidden="true" />
+          )}
           <span>{state ? line[state] : c.common.loading}</span>
         </p>
         {devices.data != null && <p className="muted small">{c.pings.devices(devices.data, fmt)}</p>}
         {act.error != null && <ErrorNote text={err(act.error)} />}
         {state === 'on' && <OkNote text={c.pings.inboxNote} />}
-        <div className="actions-row">
+        <div className="actions-row pings__actions">
           {(state === 'off' || state === 'denied') && (
             <button
               type="button"
               className="btn btn--primary"
               disabled={act.busy || state === 'denied'}
-              onClick={() => void act.run(async () => setState(await turnOnPings()))}
+              onClick={() =>
+                void act.run(async () => {
+                  const next = await turnOnPings();
+                  setRang(next === 'on');
+                  setState(next);
+                })
+              }
             >
               <BellRinging size={18} aria-hidden="true" />
               {c.pings.turnOn}

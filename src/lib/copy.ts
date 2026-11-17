@@ -2,6 +2,17 @@
 import type { Fmt } from './i18n';
 import type { InboxKind, ReportReason, RequestStatus, RulePack } from './api';
 
+/** Arabic count agreement: 1 and 2 have their own forms, 3-10 take the plural, 11+ the singular. */
+export function arCount(n: number, fmt: Fmt, f: { one: string; two: string; few: string; many: string }): string {
+  if (n === 1) return f.one;
+  if (n === 2) return f.two;
+  const m = n % 100;
+  return `${fmt(n)} ${m >= 3 && m <= 10 ? f.few : f.many}`;
+}
+const GAMES_AR = { one: 'لعبة واحدة', two: 'لعبتان', few: 'ألعاب', many: 'لعبة' };
+const FOLLOWERS_AR = { one: 'متابع واحد ينتظر.', two: 'متابعان ينتظران.', few: 'متابعين ينتظرون.', many: 'متابعاً ينتظرون.' };
+const DAYS_AR = { one: 'يوم واحد', two: 'يومين', few: 'أيام', many: 'يوماً' };
+
 const ar = {
   common: {
     back: 'رجوع',
@@ -205,7 +216,6 @@ const ar = {
     settings: 'إعدادات الديوانية',
     followed: 'ديوانيات تتابعها',
     noFollowed: 'لم تتابع أي ديوانية بعد. تابعها من صفحتها في «الليلة».',
-    quiet: 'لم تفتح ليلة منذ مدة؟ متابعوك ينتظرون.',
   },
   settings: {
     title: 'إعدادات الديوانية',
@@ -365,7 +375,10 @@ const ar = {
     inboxNote: 'كل تنبيه يبقى في صندوق الوارد، حتى لو لم يصل إلى هاتفك.',
     later: 'لاحقاً',
     toTonight: 'إلى «الليلة»',
-    devices: (n: number, fmt: Fmt) => (n === 0 ? 'لا أجهزة مسجلة' : `${fmt(n)} جهاز يستقبل التنبيهات`),
+    devices: (n: number, fmt: Fmt) =>
+      n === 0
+        ? 'لا أجهزة مسجلة'
+        : arCount(n, fmt, { one: 'جهاز واحد يستقبل التنبيهات', two: 'جهازان يستقبلان التنبيهات', few: 'أجهزة تستقبل التنبيهات', many: 'جهازاً تستقبل التنبيهات' }),
   },
   announce: {
     title: 'إعلان لضيوف الليلة',
@@ -379,19 +392,20 @@ const ar = {
   },
   nudge: {
     never: 'لم تفتح ليلة بعد. افتح الأولى ليرى متابعوك المقاعد.',
-    days: (n: number, fmt: Fmt) => `آخر ليلة فتحتها قبل ${fmt(n)} يوم.`,
-    followers: (n: number, fmt: Fmt) => (n === 0 ? '' : ` ${fmt(n)} متابع ينتظرون.`),
+    days: (n: number, fmt: Fmt) => `آخر ليلة فتحتها قبل ${arCount(n, fmt, DAYS_AR)}.`,
+    followers: (n: number, fmt: Fmt) => (n === 0 ? '' : ` ${arCount(n, fmt, FOLLOWERS_AR)}`),
     fresh: 'افتح الليلة ليرى متابعوك المقاعد ويطلبوها.',
   },
   relations: {
     title: 'أنت وهو',
-    partner: (g: number, w: number, fmt: Fmt) => `شريكان في ${fmt(g)} لعبة، فزتما في ${fmt(w)}`,
-    rival: (g: number, his: number, mine: number, fmt: Fmt) => `خصمان في ${fmt(g)} لعبة: له ${fmt(his)}، ولك ${fmt(mine)}`,
+    partner: (g: number, w: number, fmt: Fmt) =>
+      `شريكان في ${arCount(g, fmt, GAMES_AR)}، ${w === 0 ? 'ولم تفوزا بعد' : `فزتما في ${arCount(w, fmt, GAMES_AR)}`}`,
+    rival: (g: number, his: number, mine: number, fmt: Fmt) => `خصمان في ${arCount(g, fmt, GAMES_AR)}: ${fmt(his)} له، و${fmt(mine)} لك`,
     none: 'لم تلعبا معاً بعد.',
     playedWith: 'لعب مع',
     playedWithNone: 'لا ألعاب مسجلة بعد.',
-    games: (n: number, fmt: Fmt) => `${fmt(n)} لعبة`,
-    winsTogether: (n: number, fmt: Fmt) => `${fmt(n)} فوز معاً`,
+    games: (n: number, fmt: Fmt) => arCount(n, fmt, GAMES_AR),
+    winsTogether: (n: number, fmt: Fmt) => `فازا معاً في ${arCount(n, fmt, GAMES_AR)}`,
   },
   admin: {
     title: 'مراجعة البلاغات',
@@ -402,7 +416,8 @@ const ar = {
     from: (n: string) => `من ${n}`,
     aboutUser: 'عن لاعب',
     aboutDiwaniya: 'عن ديوانية',
-    openCount: (n: number, fmt: Fmt) => `${fmt(n)} بلاغ مفتوح عليه`,
+    openCount: (n: number, fmt: Fmt) =>
+      arCount(n, fmt, { one: 'بلاغ واحد مفتوح عليه', two: 'بلاغان مفتوحان عليه', few: 'بلاغات مفتوحة عليه', many: 'بلاغاً مفتوحاً عليه' }),
     held: 'موقوف حتى المراجعة',
     hidden: 'مخفي',
     note: 'ملاحظة المراجعة (تظهر في السجل)',
@@ -634,7 +649,6 @@ const en: Copy = {
     settings: 'Diwaniya settings',
     followed: 'Diwaniyas you follow',
     noFollowed: "You don't follow any diwaniya yet. Follow one from its page on Tonight.",
-    quiet: 'No night for a while? Your followers are waiting.',
   },
   settings: {
     title: 'Diwaniya settings',

@@ -80,7 +80,7 @@ function PlayerBody({ id }: { id: string }) {
             <button
               key={d.id}
               type="button"
-              className="btn btn--quiet btn--small"
+              className="btn btn--quiet btn--small btn--wrap"
               disabled={act.busy}
               onClick={() => void act.run(async () => {
                 await addCohost(d.id, profile.id);
@@ -162,7 +162,8 @@ function RelationsPanel({ rel, self }: { rel: Relations; self: boolean }) {
                   <bdi>{p.name}</bdi>
                 </a>
                 <span className="muted small">
-                  {c.relations.games(p.games, fmt)} · {c.relations.winsTogether(p.wins_together, fmt)}
+                  {c.relations.games(p.games, fmt)}
+                  {p.wins_together > 0 && <> · {c.relations.winsTogether(p.wins_together, fmt)}</>}
                 </span>
               </li>
             ))}

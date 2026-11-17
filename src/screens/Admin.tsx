@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { EyeSlash, Eye, Flag, ShieldCheck, Storefront, User } from '@phosphor-icons/react';
 import { PushBar, ErrorNote, Skeleton } from '../components/ui';
 import { NeedsAccount } from '../components/account';
@@ -60,10 +60,11 @@ function AdminGate() {
 function AdminBody() {
   const { c } = usePrefs();
   const [view, setView] = useState<View>('open');
+  const strip = useRef<HTMLDivElement>(null);
   return (
     <div className="stack admin">
       <p className="muted small">{c.admin.rule}</p>
-      <div className="tabs-row" role="tablist" aria-label={c.admin.title}>
+      <div className="tabs-row" role="tablist" aria-label={c.admin.title} ref={strip}>
         {VIEWS.map((v) => (
           <button
             key={v}
@@ -71,13 +72,17 @@ function AdminBody() {
             role="tab"
             aria-selected={view === v}
             className={view === v ? 'tab-chip tab-chip--on' : 'tab-chip'}
-            onClick={() => setView(v)}
+            onClick={(e) => {
+              setView(v);
+              // keep the chosen tab in view inside the strip on narrow screens
+              e.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+            }}
           >
             {c.admin.tabs[v]}
           </button>
         ))}
       </div>
-      <div role="tabpanel">
+      <div role="tabpanel" key={view} className="admin__panel">
         {view === 'summary' ? <Summary /> : view === 'hidden' ? <Hidden /> : <Queue status={view} />}
       </div>
     </div>
@@ -106,10 +111,14 @@ function ReportCard({ item, onDone }: { item: QueueItem; onDone: () => void }) {
   const { c, fmt, date, time, err } = usePrefs();
   const act = useAction();
   const [note, setNote] = useState('');
+  const [leaving, setLeaving] = useState(false);
   const run = (action: ReviewAction) => {
     if (action !== 'dismiss' && !window.confirm(c.admin.hideConfirm)) return;
     void act.run(async () => {
       await adminReview(item.id, action, note);
+      // the reviewed card steps out of the queue before the list reloads
+      setLeaving(true);
+      await new Promise((r) => setTimeout(r, 180));
       onDone();
     });
   };
@@ -122,12 +131,12 @@ function ReportCard({ item, onDone }: { item: QueueItem; onDone: () => void }) {
     </>
   );
   return (
-    <article className="report-card" aria-labelledby={`r-${item.id}`}>
+    <article className={leaving ? 'report-card report-card--leaving' : 'report-card'} aria-labelledby={`r-${item.id}`}>
       <header className="report-card__head">
         <Flag size={20} weight="fill" aria-hidden="true" className="report-card__icon" />
-        <h3 id={`r-${item.id}`} className="report-card__reason">
+        <h2 id={`r-${item.id}`} className="report-card__reason">
           {c.report.reasons[item.reason as ReportReason]}
-        </h3>
+        </h2>
         <span className="muted small">
           {date(item.created_at)} · {time(item.created_at)}
         </span>
@@ -230,25 +239,25 @@ function Hidden() {
     </li>
   );
   return (
-    <>
+    <div className="stack">
       {act.error != null && <ErrorNote text={err(act.error)} />}
       {users.length > 0 && (
         <section className="panel" aria-labelledby="hid-u">
-          <h3 id="hid-u" className="panel__title">
+          <h2 id="hid-u" className="panel__title">
             {c.admin.users}
-          </h3>
+          </h2>
           <ul className="people">{users.map((u) => row(u, 'user'))}</ul>
         </section>
       )}
       {diwaniyas.length > 0 && (
         <section className="panel" aria-labelledby="hid-d">
-          <h3 id="hid-d" className="panel__title">
+          <h2 id="hid-d" className="panel__title">
             {c.admin.diwaniyas}
-          </h3>
+          </h2>
           <ul className="people">{diwaniyas.map((d) => row(d, 'diwaniya'))}</ul>
         </section>
       )}
-    </>
+    </div>
   );
 }
 
@@ -266,7 +275,7 @@ function Summary() {
   );
   const reasons = Object.entries(s.open_by_reason) as [ReportReason, number][];
   return (
-    <>
+    <div className="stack">
       <section className="stats" aria-label={c.admin.tabs.summary}>
         {stat(c.admin.sum.open, s.open)}
         {stat(c.admin.sum.new7, s.new_7d)}
@@ -277,9 +286,9 @@ function Summary() {
       </section>
       {reasons.length > 0 && (
         <section className="panel" aria-labelledby="sum-r">
-          <h3 id="sum-r" className="panel__title">
+          <h2 id="sum-r" className="panel__title">
             {c.admin.sum.byReason}
-          </h3>
+          </h2>
           <dl className="info">
             {reasons.map(([r, n]) => (
               <div key={r} className="info-row">
@@ -290,6 +299,6 @@ function Summary() {
           </dl>
         </section>
       )}
-    </>
+    </div>
   );
 }

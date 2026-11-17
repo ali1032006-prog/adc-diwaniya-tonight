@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { PrefsContext, DEFAULT_PREFS, errorText, type Prefs } from './lib/prefs';
 import { SessionContext, type SessionCtx } from './lib/session';
 import { parseHash, tabOf } from './lib/router';
-import { COPY } from './lib/copy';
+import { COPY, arCount } from './lib/copy';
 
 // v1 completion: S4 pings guide helpers, the moderation queue, announcements in the Inbox,
 // partner/rival stats and delete my account. ./lib/api is spied so no backend is needed.
@@ -89,6 +89,19 @@ describe('push helpers (S4)', () => {
     expect(isIOS('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 5)).toBe(true);
     expect(isIOS('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 0)).toBe(false);
     expect(isIOS('Mozilla/5.0 (Linux; Android 15)', 5)).toBe(false);
+  });
+});
+
+describe('Arabic counts', () => {
+  const f = { one: 'لعبة واحدة', two: 'لعبتان', few: 'ألعاب', many: 'لعبة' };
+  it('uses the one, two, 3-10 plural and 11+ singular forms', () => {
+    expect(arCount(1, String, f)).toBe('لعبة واحدة');
+    expect(arCount(2, String, f)).toBe('لعبتان');
+    expect(arCount(3, String, f)).toBe('3 ألعاب');
+    expect(arCount(10, String, f)).toBe('10 ألعاب');
+    expect(arCount(11, String, f)).toBe('11 لعبة');
+    expect(arCount(103, String, f)).toBe('103 ألعاب');
+    expect(COPY.ar.nudge.followers(3, String)).toContain('متابعين');
   });
 });
 
