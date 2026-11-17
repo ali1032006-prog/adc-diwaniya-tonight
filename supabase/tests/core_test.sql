@@ -22,6 +22,11 @@ from unnest(array[
 create function pg_temp.act(u uuid) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true)
 $$;
+-- Clears the 30-minute ping throttle (tested in v1_complete_test.sql) so the cap and game
+-- filter can be checked on the same table. Runs as the test's owner.
+create function pg_temp.unthrottle(t uuid) returns void language sql security definer as $$
+  update public.game_tables set need_one_pinged_at = null where id = t
+$$;
 
 -- 0. anon gets nothing
 set local role anon;
@@ -211,6 +216,7 @@ begin
   perform pg_temp.act(S);
   update public.profile_private set ping_daily_cap = 1;
   perform pg_temp.act(H);
+  perform pg_temp.unthrottle(t_kout);
   if public.set_need_one(t_kout, true) <> 0 then raise exception 'FAIL: cap 1 ignored'; end if;
   perform pg_temp.act(S);
   update public.profile_private set ping_daily_cap = 3, ping_games = array['kout'];
@@ -218,6 +224,7 @@ begin
   exception when check_violation then null; end;
   perform pg_temp.act(H);
   if public.set_need_one(t_bal, true) <> 0 then raise exception 'FAIL: game filter ignored'; end if;
+  perform pg_temp.unthrottle(t_kout);
   if public.set_need_one(t_kout, true) <> 1 then raise exception 'FAIL: kout ping to S'; end if;
 
   -- 11. block: B's pending request is declined, follow dropped, everything hidden both ways
