@@ -15,6 +15,7 @@
   --saffron-ink: #f0a93b;
   --camel: #b08a64;
   --focus: #f0a93b;
+  --on-saffron: #15111a; /* ink on saffron fills, same in both themes */
 
   --font: 'Readex Pro Variable', system-ui, sans-serif;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -92,7 +93,7 @@ body {
 
 ::selection {
   background: var(--saffron);
-  color: #15111a;
+  color: var(--on-saffron);
 }
 
 :focus-visible {
@@ -889,7 +890,7 @@ body {
 }
 .btn--saffron {
   background: var(--saffron);
-  color: #15111a;
+  color: var(--on-saffron);
 }
 
 /* Notes: icon + words + outline, never colour alone. */
@@ -1797,7 +1798,7 @@ fieldset.panel {
   padding: 0 5px;
   border-radius: 999px;
   background: var(--saffron);
-  color: #15111a;
+  color: var(--on-saffron);
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 20px;
@@ -2488,5 +2489,12 @@ h2[id] {
   }
   .bell--ring {
     animation: none;
+  }
+}
+/* Expanded widths: the queue reads as two columns instead of 1000px-wide cards (M3 expanded) */
+@media (min-width: 1200px) {
+  .report-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
   }
 }
