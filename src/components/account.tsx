@@ -6,7 +6,7 @@ import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { useAction } from '../lib/useAsync';
 import { completeProfile, openSeats, type TableRow } from '../lib/api';
-import { currentFrom, href } from '../lib/router';
+import { currentFrom, go, href, hrefFor } from '../lib/router';
 import { clearPendingRegister, isAdult, pendingRegister } from '../lib/auth';
 import { BirthField, ConsentChecks } from './consent';
 
@@ -86,6 +86,8 @@ export function ProfileSetup() {
             await completeProfile(name, area, birth, terms, male);
             clearPendingRegister();
             await refresh();
+            // S4 comes right after profile setup (ADC-RES-50 nav map); back returns here.
+            go(hrefFor('pings'));
           });
         }}
       >

@@ -12,6 +12,8 @@ import { Player } from './screens/Player';
 import { Welcome } from './screens/Welcome';
 import { SignIn } from './screens/SignIn';
 import { Terms } from './screens/Terms';
+import { Pings } from './screens/Pings';
+import { Admin } from './screens/Admin';
 import { PrefsContext, loadPrefs, savePrefs, type Prefs } from './lib/prefs';
 import { SessionProvider, useSession } from './lib/session';
 import { useAsync } from './lib/useAsync';
@@ -32,6 +34,10 @@ function screenFor(route: Route): React.JSX.Element {
       return <SignIn mode={route.mode} from={route.from} />;
     case 'terms':
       return <Terms />;
+    case 'pings':
+      return <Pings />;
+    case 'admin':
+      return <Admin />;
     case 'player':
       return <Player id={route.id} />;
     case 'diwaniya':
@@ -100,7 +106,7 @@ function Shell() {
 
   if (route.name === 'welcome') return <Welcome onDone={() => localStorage.setItem(WELCOMED, '1')} />;
   const key = route.name + ('id' in route ? route.id : '');
-  const pushed = 'id' in route || route.name === 'signin' || route.name === 'terms';
+  const pushed = 'id' in route || ['signin', 'terms', 'pings', 'admin'].includes(route.name);
   // Score a game is full screen: the bar steps aside for the room.
   if (route.name === 'score') {
     return (

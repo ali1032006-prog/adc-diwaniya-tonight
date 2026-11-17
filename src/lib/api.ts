@@ -80,7 +80,7 @@ export interface ProfilePrivate {
   quiet_end: string | null;
   ping_daily_cap: number;
 }
-export type InboxKind = 'request' | 'approved' | 'declined' | 'auto_approved' | 'cancelled' | 'need_one' | 'no_show';
+export type InboxKind = 'request' | 'approved' | 'declined' | 'auto_approved' | 'cancelled' | 'need_one' | 'no_show' | 'announcement';
 export interface InboxRow {
   id: string;
   kind: InboxKind;
@@ -90,6 +90,7 @@ export interface InboxRow {
   table_id: string | null;
   created_at: string;
   read_at: string | null;
+  body?: string;
   diwaniya?: { name: string } | null;
 }
 export interface Standing {
@@ -200,6 +201,7 @@ export async function exportMyData(): Promise<Record<string, unknown>> {
     blocks: await pick('blocks', 'blocker_id'),
     reports: await pick('reports', 'reporter_id'),
     inbox: await pick('inbox', 'user_id'),
+    push_devices: unwrap(await db().from('push_subscriptions').select('endpoint,created_at,last_ok_at').eq('user_id', me)),
   };
 }
 
@@ -524,7 +526,7 @@ export async function listInbox(): Promise<InboxRow[]> {
   return unwrap(
     await db()
       .from('inbox')
-      .select('id,kind,diwaniya_id,night_id,request_id,table_id,created_at,read_at,diwaniya:diwaniyas(name)')
+      .select('id,kind,body,diwaniya_id,night_id,request_id,table_id,created_at,read_at,diwaniya:diwaniyas(name)')
       .order('created_at', { ascending: false })
       .limit(80),
   ) as unknown as InboxRow[];
@@ -539,6 +541,123 @@ export async function unreadCount(): Promise<number> {
 export async function markRead(ids: string[]) {
   if (ids.length === 0) return;
   unwrap(await db().from('inbox').update({ read_at: new Date().toISOString() }).in('id', ids));
+}
+
+// ---------------------------------------------------------------- v1 completion: pings, moderation, account
+
+/** S4: keep this browser's push subscription so 'Need one' and approvals reach the phone. */
+export async function savePushSubscription(endpoint: string, p256dh: string, auth: string) {
+  unwrap(await db().rpc('save_push_subscription', { p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth }));
+}
+
+export async function forgetPushSubscription(endpoint: string) {
+  const me = await uid();
+  unwrap(await db().from('push_subscriptions').delete().eq('user_id', me).eq('endpoint', endpoint));
+}
+
+export async function pushDeviceCount(): Promise<number> {
+  const me = await uid();
+  const r = await db().from('push_subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', me);
+  if (r.error) throw new ApiError(r.error.code ?? 'unknown', r.error.message);
+  return r.count ?? 0;
+}
+
+/** S8: the host's word to tonight's approved guests (5 a night). Returns how many it reached. */
+export async function announce(nightId: string, text: string): Promise<number> {
+  return unwrap(await db().rpc('announce', { p_night: nightId, p_text: text })) as number;
+}
+
+export interface Announcement {
+  id: string;
+  body: string;
+  recipients: number;
+  created_at: string;
+}
+export async function listAnnouncements(nightId: string): Promise<Announcement[]> {
+  return unwrap(
+    await db().from('announcements').select('id,body,recipients,created_at').eq('night_id', nightId).order('created_at', { ascending: false }),
+  ) as Announcement[];
+}
+
+export async function followerCount(diwaniyaId: string): Promise<number> {
+  const r = await db().from('follows').select('user_id', { count: 'exact', head: true }).eq('diwaniya_id', diwaniyaId);
+  if (r.error) throw new ApiError(r.error.code ?? 'unknown', r.error.message);
+  return r.count ?? 0;
+}
+
+/** S8 quiet-night nudge: when did this diwaniya last open a night? */
+export async function lastNightAt(diwaniyaId: string): Promise<string | null> {
+  const r = unwrap(
+    await db().from('nights').select('starts_at').eq('diwaniya_id', diwaniyaId).order('starts_at', { ascending: false }).limit(1),
+  ) as { starts_at: string }[];
+  return r[0]?.starts_at ?? null;
+}
+
+/** S14: deletes the account and everything that is his; 'DELETE' is the server-side confirm word. */
+export async function deleteMyAccount() {
+  unwrap(await db().rpc('delete_my_account', { p_confirm: 'DELETE' }));
+}
+
+export interface Relations {
+  with_me: { partner_games: number; partner_wins: number; rival_games: number; his_wins: number; my_wins: number } | null;
+  played_with: { id: string; name: string; games: number; wins_together: number }[];
+}
+export async function playerRelations(id: string): Promise<Relations> {
+  return unwrap(await db().rpc('player_relations', { p_user: id })) as Relations;
+}
+
+// Moderation queue (ruling D): every call is checked on the server; non-admins get 42501.
+export async function amIAdmin(): Promise<boolean> {
+  return Boolean(unwrap(await db().rpc('am_i_admin')));
+}
+
+export type ReportStatus = 'open' | 'dismissed' | 'actioned';
+export interface QueueItem {
+  id: string;
+  reason: ReportReason;
+  details: string;
+  status: ReportStatus;
+  created_at: string;
+  reviewed_at: string | null;
+  review_note: string;
+  target_label: string;
+  reporter: { id: string | null; name: string | null };
+  target_user: { id: string; name: string; hidden_at: string | null; held_at: string | null; open_reports: number } | null;
+  target_diwaniya: { id: string; name: string; area: string; hidden_at: string | null; held_at: string | null; open_reports: number } | null;
+}
+export async function adminReports(status: ReportStatus): Promise<QueueItem[]> {
+  return (unwrap(await db().rpc('admin_reports', { p_status: status })) as QueueItem[]) ?? [];
+}
+export type ReviewAction = 'dismiss' | 'hide_user' | 'hide_diwaniya';
+export async function adminReview(reportId: string, action: ReviewAction, note: string) {
+  unwrap(await db().rpc('admin_review', { p_report: reportId, p_action: action, p_note: note }));
+}
+export interface HiddenThing {
+  id: string;
+  name: string;
+  area: string;
+  hidden_at: string | null;
+  held_at: string | null;
+}
+export async function adminHidden(): Promise<{ users: HiddenThing[]; diwaniyas: HiddenThing[] }> {
+  return unwrap(await db().rpc('admin_hidden')) as { users: HiddenThing[]; diwaniyas: HiddenThing[] };
+}
+export async function adminUnhide(target: { user?: string; diwaniya?: string }, note: string) {
+  unwrap(await db().rpc('admin_unhide', { p_user: target.user ?? null, p_diwaniya: target.diwaniya ?? null, p_note: note }));
+}
+export interface AdminSummary {
+  open: number;
+  open_by_reason: Partial<Record<ReportReason, number>>;
+  new_7d: number;
+  reviewed_7d: number;
+  held_users: number;
+  held_diwaniyas: number;
+  hidden_users: number;
+  hidden_diwaniyas: number;
+  no_shows_7d: number;
+}
+export async function adminSummary(): Promise<AdminSummary> {
+  return unwrap(await db().rpc('admin_summary')) as AdminSummary;
 }
 
 // ---------------------------------------------------------------- live updates

@@ -8,6 +8,8 @@ export type Route =
   | { name: 'welcome' }
   | { name: 'signin'; mode: 'signin' | 'register'; from?: string } // S2 Sign in and Register (Google only)
   | { name: 'terms' } // Terms and Privacy (ruling C: men only, ruling B: 18+)
+  | { name: 'pings' } // S4 Install and pings guide
+  | { name: 'admin' } // moderation queue, Ali's admin role (ruling D)
   | { name: 'place'; id: string } // S6 Diwaniya page (pushed from Tonight, Diwaniya or Inbox)
   | { name: 'settings'; id: string } // S9 Diwaniya settings (host)
   | { name: 'score'; id: string; table?: string } // S10 Score a game (full screen)
@@ -23,6 +25,8 @@ export function parseHash(hash: string): Route {
   const id = parts[1] ?? '';
   if (head === 'welcome') return { name: 'welcome' };
   if (head === 'terms') return { name: 'terms' };
+  if (head === 'pings') return { name: 'pings' };
+  if (head === 'admin') return { name: 'admin' };
   if (head === 'signin') {
     const q = new URLSearchParams(query);
     const from = q.get('from') ?? undefined;
@@ -40,7 +44,7 @@ export function parseHash(hash: string): Route {
   return { name: (TABS as readonly string[]).includes(head) ? (head as Tab) : 'tonight' };
 }
 
-export function hrefFor(name: Tab | 'welcome' | 'terms'): string {
+export function hrefFor(name: Tab | 'welcome' | 'terms' | 'pings' | 'admin'): string {
   return `#/${name}`;
 }
 
@@ -76,6 +80,9 @@ export function tabOf(r: Route, from: Tab = 'tonight'): Tab {
     case 'settings':
     case 'score':
       return 'diwaniya';
+    case 'pings':
+    case 'admin':
+      return 'me';
     case 'player':
       return from === 'league' || from === 'diwaniya' || from === 'tonight' ? from : 'league';
     default:

@@ -47,6 +47,7 @@ export function errorText(e: unknown, c: Copy): string {
   if (code === 'P0002' || code === 'PGRST116') return c.errors.notFound;
   if (code === '42501') return c.errors.forbidden;
   if (code === '23514') return c.errors.cap;
+  if (code === '54000') return c.errors.limit;
   if (code === '23505') return c.errors.duplicate;
   if (code === '22023' || code === '22P02' || code === '23502') return c.errors.invalid;
   return c.errors.unknown;

@@ -1,4 +1,4 @@
-import { Bell, CheckCircle, Lightning, XCircle, UserPlus, Warning, Prohibit } from '@phosphor-icons/react';
+import { Bell, CheckCircle, Lightning, XCircle, UserPlus, Warning, Prohibit, Megaphone } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
 import { EmptyState } from '../components/EmptyState';
@@ -18,6 +18,7 @@ const ICON: Record<InboxKind, Icon> = {
   cancelled: Prohibit,
   need_one: Lightning,
   no_show: Warning,
+  announcement: Megaphone,
 };
 
 /** Where an inbox item leads: hosts to their board, guests to the diwaniya page. */
@@ -97,6 +98,9 @@ function InboxBody() {
                 </span>
                 <span className="inbox__text">
                   <bdi>{c.inbox.kinds[i.kind](i.diwaniya?.name ?? t.appName)}</bdi>
+                  {i.kind === 'announcement' && i.body && (
+                    <bdi className="inbox__body">{i.body}</bdi>
+                  )}
                   <span className="muted small">
                     {new Date(i.created_at).toDateString() === today ? time(i.created_at) : date(i.created_at)}
                   </span>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { UserCircle, DownloadSimple, SignOut } from '@phosphor-icons/react';
+import { UserCircle, DownloadSimple, SignOut, BellRinging, ShieldCheck, Trash, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
 import { ProfileSetup } from '../components/account';
 import { Chips, ErrorNote, Field, OkNote } from '../components/ui';
 import { usePrefs, type Theme } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { useAction, useAsync } from '../lib/useAsync';
-import { GAMES, exportMyData, listBlocked, unblock, updatePrivate, updateProfile, type Game } from '../lib/api';
+import { GAMES, amIAdmin, deleteMyAccount, exportMyData, listBlocked, unblock, updatePrivate, updateProfile, type Game } from '../lib/api';
+import { pushState, type PushState } from '../lib/push';
 import type { Lang, Numerals } from '../lib/i18n';
 import { href, hrefFor } from '../lib/router';
 
@@ -37,6 +38,8 @@ function Segmented<T extends string>({
     </fieldset>
   );
 }
+
+const prefsDir = () => (typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr');
 
 // The account's saved display preferences are applied once per signed-in person on this device.
 let appliedFor: string | null = null;
@@ -147,6 +150,17 @@ function AccountPanels() {
   const [quietEnd, setQuietEnd] = useState(priv.quiet_end?.slice(0, 5) ?? '');
   const [cap, setCap] = useState(priv.ping_daily_cap);
   const blocked = useAsync(listBlocked, []);
+  const admin = useAsync(amIAdmin, []);
+  const [device, setDevice] = useState<PushState | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+  useEffect(() => {
+    let live = true;
+    void pushState().then((p) => live && setDevice(p)).catch(() => live && setDevice('unsupported'));
+    return () => {
+      live = false;
+    };
+  }, []);
+  const Caret = prefsDir() === 'rtl' ? CaretLeft : CaretRight;
 
   useEffect(() => {
     if (appliedFor === profile.id) return;
@@ -249,6 +263,18 @@ function AccountPanels() {
         <h2 id="me-pings" className="panel__title">
           {c.me.pings}
         </h2>
+        <a className="link-row" href={hrefFor('pings')}>
+          <span className="link-row__main">
+            <BellRinging size={20} weight={device === 'on' ? 'fill' : 'regular'} aria-hidden="true" />
+            <span>
+              {c.me.devicePings}
+              <span className="muted small link-row__sub">
+                {device === 'on' ? c.pings.stateOn : device === 'needs-install' ? c.pings.stateInstall : device === 'denied' ? c.pings.stateDenied : device === 'unsupported' ? c.pings.stateUnsupported : c.pings.stateOff}
+              </span>
+            </span>
+          </span>
+          <Caret size={18} aria-hidden="true" />
+        </a>
         <div className="field">
           <span className="field__label">{c.me.pingGames}</span>
           <Chips<Game> legend={c.me.pingGames} multi value={pingGames} options={gameOpts} onChange={setPingGames} />
@@ -328,8 +354,45 @@ function AccountPanels() {
           <DownloadSimple size={18} aria-hidden="true" />
           {c.me.download}
         </button>
-        <p className="muted small">{c.me.deleteNote}</p>
+        <a className="btn btn--text" href={hrefFor('terms')}>
+          {c.signin.readTerms}
+        </a>
       </section>
+
+      {admin.data && (
+        <a className="link-row panel" href={hrefFor('admin')}>
+          <span className="link-row__main">
+            <ShieldCheck size={20} aria-hidden="true" />
+            <span>{c.admin.entry}</span>
+          </span>
+          <Caret size={18} aria-hidden="true" />
+        </a>
+      )}
+
+      <form
+        className="panel danger-zone"
+        aria-labelledby="me-delete"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (confirmText.trim() !== c.me.deleteWord) return;
+          void act.run(async () => {
+            await deleteMyAccount();
+            await s.signOut();
+          });
+        }}
+      >
+        <h2 id="me-delete" className="panel__title">
+          {c.me.deleteTitle}
+        </h2>
+        <p className="muted">{c.me.deleteBody}</p>
+        <Field label={c.me.deleteType(c.me.deleteWord)}>
+          <input className="input" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off" />
+        </Field>
+        <button className="btn btn--danger" disabled={act.busy || confirmText.trim() !== c.me.deleteWord}>
+          <Trash size={18} aria-hidden="true" />
+          {c.me.deleteButton}
+        </button>
+      </form>
     </>
   );
 }

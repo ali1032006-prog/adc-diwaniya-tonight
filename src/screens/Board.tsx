@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Gear, Lightning, Trash, UserPlus, Star, ChartBar, Plus } from '@phosphor-icons/react';
+import { Gear, Lightning, Trash, UserPlus, Star, ChartBar, Plus, Megaphone, Moon } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
 import { SeatRing } from '../components/SeatRing';
 import { NeedsAccount, TableRing } from '../components/account';
@@ -9,6 +9,10 @@ import { useAction, useAsync } from '../lib/useAsync';
 import {
   GAMES,
   addRegular,
+  announce,
+  followerCount,
+  lastNightAt,
+  listAnnouncements,
   addTable,
   checkIn,
   clearSeat,
@@ -176,7 +180,7 @@ function HostBoard({ dw, all, onPick }: { dw: Diwaniya; all: Diwaniya[]; onPick:
           <h2 id="open-t" className="panel__title panel__title--ink">
             {c.board.openTonight}
           </h2>
-          <p className="muted">{c.board.quiet}</p>
+          <QuietNudge id={dw.id} />
           <form
             className="form form--row"
             onSubmit={(e) => {
@@ -223,9 +227,91 @@ function HostBoard({ dw, all, onPick }: { dw: Diwaniya; all: Diwaniya[]; onPick:
           </ul>
           <AddTable nightId={night.data.id} busy={act.busy} run={run} />
           <Requests dw={dw} night={night.data} />
+          <Announce nightId={night.data.id} />
         </>
       )}
     </>
+  );
+}
+
+/** Quiet-night nudge (regulars and follow, ADC-RES-49 s.5): how long since the last night, who waits. */
+export function QuietNudge({ id }: { id: string }) {
+  const { c, fmt } = usePrefs();
+  const data = useAsync(async () => {
+    const [last, followers] = await Promise.all([lastNightAt(id), followerCount(id)]);
+    return { last, followers };
+  }, [id]);
+  if (!data.data) return <p className="muted">{c.nudge.fresh}</p>;
+  const { last, followers } = data.data;
+  const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86_400_000) : null;
+  const text =
+    days == null ? c.nudge.never : days >= 6 ? c.nudge.days(days, fmt) + c.nudge.followers(followers, fmt) : c.nudge.fresh + c.nudge.followers(followers, fmt);
+  return (
+    <p className="nudge">
+      <Moon size={20} weight="fill" aria-hidden="true" />
+      <span>{text}</span>
+    </p>
+  );
+}
+
+/** The host's note to tonight's approved guests: the only message a diwaniya sends (5 a night). */
+function Announce({ nightId }: { nightId: string }) {
+  const { c, fmt, time, err } = usePrefs();
+  const log = useAsync(() => listAnnouncements(nightId), [nightId]);
+  const act = useAction();
+  const [text, setText] = useState('');
+  const [sent, setSent] = useState('');
+  const used = log.data?.length ?? 0;
+  return (
+    <section className="panel" aria-labelledby="announce-t">
+      <h2 id="announce-t" className="panel__title">
+        <Megaphone size={20} aria-hidden="true" /> {c.announce.title}
+      </h2>
+      <p className="muted small">{c.announce.body}</p>
+      <form
+        className="announce__form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void act.run(async () => {
+            const n = await announce(nightId, text);
+            setText('');
+            setSent(c.announce.sent(n, fmt));
+            log.reload();
+          });
+        }}
+      >
+        <Field label={c.announce.label} hint={c.announce.left(Math.max(0, 5 - used), fmt)}>
+          <textarea
+            className="input"
+            rows={2}
+            maxLength={300}
+            required
+            placeholder={c.announce.placeholder}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+        </Field>
+        {act.error != null && <ErrorNote text={err(act.error)} />}
+        {sent && <OkNote text={sent} />}
+        <button className="btn btn--quiet" disabled={act.busy || used >= 5 || text.trim() === ''}>
+          <Megaphone size={18} aria-hidden="true" />
+          {c.announce.send}
+        </button>
+      </form>
+      {used > 0 && (
+        <>
+          <h3 className="setting__label">{c.announce.log}</h3>
+          <ul className="announce__log">
+            {log.data!.map((a) => (
+              <li key={a.id}>
+                <bdi>{a.body}</bdi>
+                <span className="muted small">{time(a.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }
 
