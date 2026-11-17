@@ -270,7 +270,7 @@ function BoardTable({
               {c.board.sitMe}
             </button>
             <form
-              className="form form--row"
+              className="form form--walkin"
               onSubmit={(e) => {
                 e.preventDefault();
                 run(async () => {

@@ -739,6 +739,26 @@ h2 {
 
 /* ---------- Slice 3: wired screens ---------- */
 
+/* Long names with no spaces (up to 40 characters) must wrap, never widen a screen. */
+body {
+  overflow-wrap: anywhere;
+}
+.btn,
+.chip span,
+.segmented__opt span,
+.nav__label,
+.status,
+.tag {
+  overflow-wrap: normal;
+}
+.screen__body,
+.panel {
+  grid-template-columns: minmax(0, 1fr);
+}
+.account > div {
+  min-width: 0;
+}
+
 .visually-hidden {
   position: absolute !important;
   width: 1px;
@@ -1065,6 +1085,9 @@ fieldset:disabled .input {
 .filters .chips {
   flex-wrap: nowrap;
 }
+.filters > * {
+  flex: none;
+}
 .chip {
   position: relative;
   flex: none;
@@ -1277,11 +1300,19 @@ fieldset:disabled .input {
   border: 1px solid var(--hairline);
 }
 .table-block__side {
-  flex: 1 1 200px;
+  flex: 1 1 240px;
   min-width: 0;
   display: grid;
   gap: 10px;
   justify-items: start;
+}
+.form--walkin {
+  width: 100%;
+  gap: 8px;
+  justify-items: start;
+}
+.form--walkin .field {
+  width: 100%;
 }
 .seat-pick {
   display: flex;
