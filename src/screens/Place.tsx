@@ -8,6 +8,7 @@ import { MapView, googleMapsUrl } from '../components/Map';
 import { areaLabel } from '../lib/areas';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
+import { NightCardButton } from '../components/TvRoom';
 import { useAction, useAsync } from '../lib/useAsync';
 import {
   cancelRequest,
@@ -120,6 +121,8 @@ function PlaceBody({ id }: { id: string }) {
               {c.messages.toHost}
             </a>
           )}
+          {/* the end-of-night card for anyone who was at tonight's night (ADC-RES-54) */}
+          {!manager && userId && <NightCardButton diwaniyaId={dw.id} />}
         </div>
       </section>
 

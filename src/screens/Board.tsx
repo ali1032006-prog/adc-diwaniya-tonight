@@ -30,6 +30,7 @@ import { NeedsAccount, TableRing } from '../components/account';
 import { ErrorNote, Field, OkNote, Skeleton } from '../components/ui';
 import { AreaSelect } from '../components/AreaSelect';
 import { MapPicker, MapView, type LatLng } from '../components/Map';
+import { NightCardButton, TvPanel } from '../components/TvRoom';
 import { areaLabel } from '../lib/areas';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
@@ -637,7 +638,12 @@ function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwan
           ) : night.error != null && night.data === undefined ? (
             <ErrorNote text={err(night.error)} onRetry={night.reload} />
           ) : !night.data ? (
-            <OpenTonight id={dw.id} busy={act.busy} onOpen={(at) => run(() => openNight(dw.id, at))} />
+            <>
+              <OpenTonight id={dw.id} busy={act.busy} onOpen={(at) => run(() => openNight(dw.id, at))} />
+              <div className="tvroom__after">
+                <NightCardButton diwaniyaId={dw.id} />
+              </div>
+            </>
           ) : (
             <>
               <div className="dw-tonight">
@@ -654,6 +660,7 @@ function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwan
                   {c.board.closeNight}
                 </button>
               </div>
+              <TvPanel night={night.data} diwaniyaId={dw.id} />
               <Announce nightId={night.data.id} />
             </>
           )}

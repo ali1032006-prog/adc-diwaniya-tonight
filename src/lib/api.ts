@@ -914,3 +914,61 @@ export function subscribe(name: string, tables: string[], onChange: () => void):
     void c.removeChannel(ch);
   };
 }
+
+// ---------------------------------------------------------------- Diwaniya on the TV (ADC-RES-54, ADC-LOG-817)
+/** The TV room for tonight's night: the 6-letter code the TV types in, and when it stops working. */
+export interface TvRoom {
+  code: string;
+  expires_at: string;
+}
+export async function tvCurrent(nightId: string): Promise<TvRoom | null> {
+  return (unwrap(await db().rpc('tv_current', { p_night: nightId })) as TvRoom | null) ?? null;
+}
+export async function tvOpen(nightId: string): Promise<TvRoom> {
+  return unwrap(await db().rpc('tv_open', { p_night: nightId })) as TvRoom;
+}
+export async function tvNewCode(nightId: string): Promise<TvRoom> {
+  return unwrap(await db().rpc('tv_new_code', { p_night: nightId })) as TvRoom;
+}
+export async function tvRevoke(nightId: string): Promise<number> {
+  return unwrap(await db().rpc('tv_revoke', { p_night: nightId })) as number;
+}
+
+/** Tonight's draw: a fair shuffle made on the server, shown on the phone and the TV. */
+export interface DrawSeat {
+  seat: number;
+  name: string;
+  team: number;
+}
+export interface DrawTable {
+  label: string;
+  game: Game | null;
+  seats: DrawSeat[];
+}
+export interface Draw {
+  no: number;
+  at: string;
+  tables: DrawTable[];
+  waiting: string[];
+}
+export async function tvDraw(nightId: string, names: string[]): Promise<Draw> {
+  return unwrap(await db().rpc('tv_draw', { p_night: nightId, p_names: names })) as Draw;
+}
+
+/** The end-of-night card: the managers and anyone who was at that night get it; null for others. */
+export interface NightCard {
+  name: string;
+  area: string;
+  starts_at: string;
+  open: boolean;
+  games: number;
+  players: number;
+  list: { rule_pack: RulePack; at: string; winners: string[]; losers: string[] }[];
+  top: { name: string; wins: number; played: number }[];
+  me: { played: number; wins: number } | null;
+  crown: string[];
+  host: boolean;
+}
+export async function nightCard(diwaniyaId: string): Promise<NightCard | null> {
+  return (unwrap(await db().rpc('night_card', { p_diwaniya: diwaniyaId })) as NightCard | null) ?? null;
+}
