@@ -313,6 +313,7 @@ function Board({ t, lang, board, offline, realtime, onLang, onExit }: { t: TvCop
         <aside className="tv-side">
           <Crown t={t} names={board.crown} />
           <Season t={t} rows={board.season} />
+          <Last t={t} board={board} />
           {board.draw && <DrawSummary t={t} draw={board.draw} />}
         </aside>
       </div>
@@ -384,7 +385,7 @@ function Tables({ t, board }: { t: TvCopy; board: TvBoard }) {
               <span className="tv-tag">{t.games_[tb.game]}</span>
               {tb.need_one && <span className="tv-tag tv-tag--saffron">{t.needOne}</span>}
             </p>
-            <ol className="tv-seats">
+            <ol className="tv-seats" style={{ '--n': tb.seat_count } as CSSProperties}>
               {Array.from({ length: tb.seat_count }, (_, k) => k + 1).map((no) => {
                 const s = tb.seats.find((x) => x.no === no);
                 return (
@@ -397,24 +398,33 @@ function Tables({ t, board }: { t: TvCopy; board: TvBoard }) {
           </li>
         ))}
       </ul>
-      {board.tonight.last.length > 0 && (
-        <ul className="tv-results">
-          {board.tonight.last.map((r, i) => (
-            <li key={`${r.at}-${i}`}>
-              <span className="tv-tag">{t.packs[r.rule_pack]}</span>
-              <span>
-                {r.winners.map((w, j) => (
-                  <bdi key={`${w}-${j}`}>
-                    {j > 0 && ' · '}
-                    {w}
-                  </bdi>
-                ))}{' '}
-                <span className="tv-muted">{t.won}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+    </section>
+  );
+}
+
+function Last({ t, board }: { t: TvCopy; board: TvBoard }) {
+  if (board.tonight.last.length === 0) return null;
+  return (
+    <section className="tv-last" aria-labelledby="tv-last-t">
+      <h2 id="tv-last-t" className="tv-h2">
+        {t.lastTitle}
+      </h2>
+      <ul className="tv-results">
+        {board.tonight.last.map((r, i) => (
+          <li key={`${r.at}-${i}`}>
+            <span className="tv-tag">{t.packs[r.rule_pack]}</span>
+            <span>
+              <span className="tv-muted">{t.won}</span>{' '}
+              {r.winners.map((w, j) => (
+                <bdi key={`${w}-${j}`}>
+                  {j > 0 && ' · '}
+                  {w}
+                </bdi>
+              ))}
+            </span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
