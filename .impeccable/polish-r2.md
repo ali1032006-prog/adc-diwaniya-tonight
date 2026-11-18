@@ -170,3 +170,36 @@ Walked as a host on the Diwaniya page (change who sees it, approvals, messages a
 ## 5. Verify and finish
 
 60/60 harness measures without page overflow, one h1 and no heading jumps, no unnamed control, no target under 24 px. Tests 158/158 (src/ali4.test.tsx covers all four items; the language test was red on 333a91c first), build with the prod-bundle guard, Semgrep clean. Diff read through: no debug output, no orphaned styles; the harness's mock additions stay git-excluded. Email sign-up/sign-in not built (held for Ali's mail ruling).
+
+
+# Polish pass: Ali's change list 5 (ADC-LOG-806) + the owed sign-in screens and rendered signed-in pass
+
+Worked through `reference/polish.md` by hand, every step, on the preview itself (4e41893c, then 3ddb4691), signed out and signed in with a throwaway smoke account (deleted after, 0 left), all 9 sizes in Arabic, sign-in and Welcome in English too.
+
+## 1. Establish the system
+
+Shared parts reused, nothing new invented: `Sheet` for the filter, `.chip` for the scope and game choices, native selects for the specific governorate and area (as the area picker does elsewhere), `.btn--danger` for Clear, `.btn--quiet` for the switch, the menu badge's saffron-on-ink for the count. Drift classified: the on-page Location dropdown + chips row was a conceptual mismatch with Ali's one-button filter and is gone; the Welcome-only language button was a one-off and became the shared `LangSwitch`; the solo app bar's centring was a local defect once it had a second item.
+
+## 2. Gather the evidence
+
+Signed out: switched Arabic to English and back on Sign in, reloaded (choice kept), opened New account and Forgot password, measured 18 size x language runs. Signed in: Welcome in English after the switch, walked its three steps to Tonight (still English), opened Filter, chose Governorate (Apply disabled, hint shown), Hawalli + Baloot (live count 1), Apply (badge 2, summary, list of one, both saved on the device), reopened in Arabic, chose Area (6 governorate groups), checked the sheet at 320x568, 844x390 and 1280x800, then the five tabs and the open sheet at all 9 sizes. The account's saved language was read back after the run: `en`, the device's last choice.
+
+## 3. Triage
+
+1. Blocked or misleading: none found. Apply can't send an empty kind; Clear really clears.
+2. States: empty (no nights: no Filter, the empty state as before), no match (inline Clear filters as before), disabled Apply, live count.
+3. Layout: solo app bar collision at 320 (fixed); summary ellipsis on narrow phones keeps the button on one line.
+4. Motion: the badge pops in with the existing `check-in` keyframe (scale + opacity, 180 ms) and re-keys on each new count; the specific picker fades in (opacity); both off under `prefers-reduced-motion`. The sheet keeps its slide-up / dialog-in.
+5. Cleanup: `locationOptions`, `whereLabel`, the `.filters` row styles, `.input--where`, the preview form, its test, the vite define, the `build:preview` script and the bundle check script removed; README rewritten for the test accounts.
+
+## 4. Polish the whole path
+
+- Flow and hierarchy: Tonight reads your night, Filter (with what is on beside it), the count, the list. The sheet reads Location then Game, with the result count right above Apply.
+- Layout and type: legends at the sheet title's step down (1rem 700); chips wrap in both parts; actions sticky at the sheet's foot with a hairline, Clear one third, Apply two thirds.
+- Colour and icons: Phosphor FunnelSimple and Globe in the regular weight like every other icon; the Filter button edge turns saffron while any filter is on.
+- Interaction: Esc, the X, the back gesture and a backdrop tap close the sheet without applying; focus returns to the Filter button (Sheet); the switch is a 44 px target everywhere it appears.
+- Copy: "Filter", "Filter, 2 on", "Location", "All of Kuwait", "Governorate", "Area", "Pick a governorate", "Pick the governorate first", "Pick the area first", "Game", "All games", "Apply", "Clear", "All of <governorate>"; Arabic for each (تصفية، الموقع، كل الكويت، محافظة، منطقة، اللعبة، تطبيق، مسح).
+
+## 5. Verify and finish
+
+Signed out 18/18 and signed in 54/54 measures without overflow (innerWidth equal to the emulated width every time), one h1, no heading jumps, no unnamed control, no target under 24 px except the Terms checkbox (22 px inside its full-width label, as before). Tests 180/180 (src/ali5.test.tsx, 12, covers all three items), build, Semgrep clean. Diff read through: no debug output, no orphaned styles or strings.

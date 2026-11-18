@@ -452,3 +452,71 @@ Also checked and fine: no `select` anywhere on the Score page and no "someone el
 3. **[P2] `/impeccable layout`**: dropdowns stack on phones; room above the teams (done).
 4. **[P3] `/impeccable layout`**: desktop dropdown width, Score tab spacing (done).
 5. **[P3] `/impeccable polish`**: the polish pass below.
+
+
+# Re-run before the 2/3 handoff: Ali's change list 5 (ADC-LOG-806) + the owed sign-in screens and rendered signed-in pass
+
+Worked through `reference/audit.md` by hand, every dimension, on the real preview (not the harness): https://4e41893c.adc-diwaniya-tonight.pages.dev (2f7eba0) for the first look, then https://3ddb4691.adc-diwaniya-tonight.pages.dev (109dca7) after the fixes. Signed out: Sign in, New account and the forgot-password view in Arabic and English at all 9 sizes (18 measures). Signed in: a throwaway `smoke-ui-*@example.invalid` account (confirmed, profile done, session from the public password grant, deleted afterwards, 0 left), the Welcome steps, the five tabs and the open Filter sheet in Arabic at all 9 sizes (54 measures), Tonight and Me in English. Nothing was created on dev but that account. The four review test accounts were checked by `create_test_accounts.py --verify` (all email-confirmed, all sign in through the public endpoint the form uses); their passwords were never typed into a browser.
+
+## Audit Health Score
+
+| # | Dimension | Score | Key Finding |
+|---|-----------|-------|-------------|
+| 1 | Accessibility | 4 | Language switch names itself with the target language in that language's `lang`; Filter button says how many filters are on ("Filter, 2 on"); sheet parts are fieldsets with legends; one h1, no heading jumps, no unnamed control on any screen |
+| 2 | Performance | 3 | No new dependency; one Phosphor icon each for Filter and the switch; index chunk 470 kB (unchanged band) |
+| 3 | Theming | 4 | Badge saffron on ink like the menu badge, Clear on the shared `.btn--danger`, sticky actions on `--surface` with `--hairline` |
+| 4 | Responsive Design | 3 | 320 phone: the centred app name ran into the new switch (P1, fixed); after it 72/72 measures without overflow, Google button and Welcome's Next inside the first screen at 320x568 and 844x390 |
+| 5 | Implementation Integrity | 4 | One shared `LangSwitch` for sign-in and Welcome; the sheet reuses `Sheet` and `.chip`; the test-form code, flag, build script and bundle check are gone, not hidden |
+| **Total** | | **18/20** | **Excellent** |
+
+## Implementation Integrity Verdict
+
+Pass. The filter is one control with one sheet, built from the app's own Sheet, chips and native selects (the same pattern as the area picker elsewhere), and nothing on the page changes until Apply. The language choice has one source of truth on the device and one writer to the account (PrefsSync), so there is no second path that could flip it. The preview-only test sign-in is deleted at the source: no `src/preview/`, no `__PREVIEW_SIGNIN__`, no `build:preview`; ali5.test.tsx asserts all three.
+
+## Executive Summary
+
+- Audit Health Score: **18/20** (Excellent)
+- Issues: P0 0, P1 1 (fixed), P2 2 (fixed), P3 1 (left, browser-owned)
+- Top issues: the solo app bar collision at 320 px; a governorate summary that read like the area of the same name; one generic "pick first" hint
+- Next: none blocking; the joint 2/3 handoff can name this commit once Ambessa opens it
+
+## Detailed Findings by Severity
+
+- **[P1] App name runs into the language switch on a 320 phone** (fixed in 109dca7)
+  - Location: `src/styles.css` `.appbar--solo`
+  - Category: Responsive
+  - Impact: at 320 px the centred "Diwaniyatna" / "ديوانيتنا" overlapped the switch in both languages (measured `titleSwitchOverlap: true`, 2f7eba0)
+  - Recommendation: give the switch's column its content width (`1fr auto 1fr`, not `minmax(0,1fr)`) so the name gives way; re-measure 18 sizes x languages
+  - Suggested command: /impeccable adapt
+- **[P2] Governorate filter summary reads like an area** (fixed)
+  - Location: `src/screens/Tonight.tsx` summary line
+  - Category: Implementation Integrity (copy)
+  - Impact: "Hawalli" next to the Filter button could mean the governorate or the area of the same name; same for Jahra, Farwaniya, Ahmadi
+  - Recommendation: "All of Hawalli" / "كل حولي" for a governorate
+  - Suggested command: /impeccable clarify
+- **[P2] One hint for two missing picks** (fixed)
+  - Location: Filter sheet live line
+  - Impact: "Pick the governorate or area first" while only one kind is chosen
+  - Recommendation: "Pick the governorate first" / "Pick the area first"
+  - Suggested command: /impeccable clarify
+- **[P3] Date of birth placeholder follows the browser's locale (mm/dd/yyyy in Arabic)**
+  - Location: Register, `BirthField` native date input
+  - Impact: cosmetic; the native picker is the right control on phones and its placeholder is drawn by the browser
+  - Recommendation: leave as is (browser-owned surface)
+
+## Patterns & Systemic Issues
+
+Solo screens (sign-in, reset) are the only bars without a back button, so anything added to them needs its own width rule; the switch now has one and the 18 signed-out measures cover it.
+
+## Positive Findings
+
+- Apply stays disabled until a specific governorate or area is picked, and the sheet shows the live count before Apply, so the user never applies an empty choice.
+- Clear is red on the shared danger style and empties both parts in one tap.
+- The switch writes `dt.prefs.v1` on the device; after the smoke account signed in, the page stayed English and the account's saved language became `en` (read back from `profile_private`), so the ADC-LOG-797 flip cannot come back through this path.
+- Sheet actions stay on screen at 320x568 (Apply bottom 540) and as a centred dialog at 844x390 (346) and desktop.
+
+## Recommended Actions
+
+1. **[P1] `/impeccable adapt`**: solo app bar column for the switch (done, 109dca7)
+2. **[P2] `/impeccable clarify`**: governorate summary and the missing-pick hint (done, 109dca7)
+3. **[P2] `/impeccable polish`**: final pass (polish-r2.md, change list 5 section)
