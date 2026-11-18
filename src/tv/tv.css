@@ -363,7 +363,7 @@ bdi {
   gap: 1.25rem;
   min-width: 0;
 }
-@media (min-aspect-ratio: 5/4) and (min-width: 700px) {
+@media (min-aspect-ratio: 5/4) and (min-width: 1000px) {
   .tv-grid {
     grid-template-columns: minmax(0, 2.1fr) minmax(16rem, 1fr);
     align-items: start;
