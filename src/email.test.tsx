@@ -21,7 +21,7 @@ vi.mock('./lib/supabase', () => ({ supabase: () => ({ auth: sb }), setSupabaseFo
 
 const auth = await import('./lib/auth');
 const { SignIn } = await import('./screens/SignIn');
-const { NewPassword } = await import('./components/EmailAuth');
+const { NewPassword, ltr } = await import('./components/EmailAuth');
 
 const en = COPY.en;
 const ar = COPY.ar;
@@ -129,7 +129,7 @@ describe('register with email', () => {
     });
     expect(auth.pendingRegister()).toEqual({ birth: yearsAgo(30), terms: true });
     await screen.findByText(en.signin.checkTitle);
-    expect(screen.getByText(en.signin.checkBody('new@example.org'))).toBeTruthy();
+    expect(screen.getByText(en.signin.checkBody(ltr('new@example.org')))).toBeTruthy();
     // the resend waits out the cooldown first
     expect((screen.getByRole('button', { name: /ask again in/i }) as HTMLButtonElement).disabled).toBe(true);
     expect(container.querySelector('input[type=password]')).toBeNull();
@@ -204,7 +204,7 @@ describe('password reset', () => {
     expect((container.querySelector('input[type=email]') as HTMLInputElement).value).toBe('me@example.org');
     fireEvent.click(screen.getByRole('button', { name: en.signin.resetSend }));
     await waitFor(() => expect(sb.resetPasswordForEmail).toHaveBeenCalledWith('me@example.org', { redirectTo: back + '?reset=1' }));
-    await screen.findByText(en.signin.resetSent('me@example.org'));
+    await screen.findByText(en.signin.resetSent(ltr('me@example.org')));
     fireEvent.click(screen.getByRole('button', { name: en.signin.back }));
     expect(screen.getByRole('button', { name: en.signin.emailSignIn })).toBeTruthy();
   });

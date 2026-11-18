@@ -21,6 +21,9 @@ import {
 
 const RESEND_AFTER_S = 60;
 
+/** An address inside a sentence stays one left-to-right run, also in Arabic (Unicode LRI ... PDI). */
+export const ltr = (s: string) => `\u2066${s}\u2069`;
+
 function useProblem() {
   const { c } = usePrefs();
   const [problem, setProblem] = useState<AuthProblem | null>(null);
@@ -273,7 +276,7 @@ export function CheckInbox({ email }: { email: string }) {
       <EnvelopeSimpleOpen size={40} aria-hidden="true" className="signin__check-icon" />
       <h3 className="signin__lead">{c.signin.checkTitle}</h3>
       <p>
-        <bdi>{c.signin.checkBody(email)}</bdi>
+        <bdi>{c.signin.checkBody(ltr(email))}</bdi>
       </p>
       <p className="muted">{c.signin.checkNote}</p>
       {p.text && <ErrorNote text={p.text} />}
@@ -320,7 +323,7 @@ export function ResetRequest({ initialEmail, onBack }: { initialEmail: string; o
       <form className="form" onSubmit={(e) => void submit(e)}>
         <EmailField value={email} onChange={setEmail} />
         {p.text && <ErrorNote text={p.text} />}
-        {sentTo && <OkNote text={c.signin.resetSent(sentTo)} />}
+        {sentTo && <OkNote text={c.signin.resetSent(ltr(sentTo))} />}
         <button type="submit" className="btn btn--primary" disabled={busy || cool.left > 0} aria-busy={busy || undefined}>
           {busy ? c.signin.busy : cool.left > 0 ? c.signin.resendIn(String(cool.left)) : c.signin.resetSend}
         </button>
