@@ -7,10 +7,11 @@
 --     no emails, no birth dates, no areas of people; unknown, revoked, expired or closed = no data;
 -- (3) wrong codes are rate-limited per client IP (10 in 10 minutes), a known code per room (60 a minute);
 -- (4) Tonight's draw: managers only, fair server-side shuffle of 2-36 unique names into tonight's
---     tables and seats (teams by seat), the rest wait; 20 draws a night;
+--     tables and seats (teams by seat, tables in the TV's label order), the rest wait; 20 draws a night;
 -- (5) night_card(diwaniya) for the managers and anyone at that night, nobody else, never anon;
 -- (6) the TV tables are not readable by anon or authenticated.
--- Written before the migration (red on 9a199fe: function public.tv_open(uuid) does not exist), applied on dev as 20261118184831.
+-- Written before the migration (red on 9a199fe: function public.tv_open(uuid) does not exist), applied on dev as 20261118184831;
+-- the table-order check (4) was red on d30b146 (Table B came first), fixed by 20261118190716.
 -- One transaction that always rolls back. Run: python3 scripts/sql_test.py supabase/tests/tv_room_test.sql
 begin;
 
@@ -64,6 +65,9 @@ begin
   insert into public.nights (diwaniya_id, starts_at) values (v_d, now() - interval '10 minutes') returning id into v_n;
   insert into public.game_tables (night_id, game, seat_count, label) values (v_n, 'kout', 4, 'Table A') returning id into v_t;
   insert into public.game_tables (night_id, game, seat_count, label) values (v_n, 'trix', 4, 'Table B') returning id into v_t2;
+  -- Table B was set up first: the draw must still follow the TV's order (by label)
+  reset role; update public.game_tables set created_at = now() - interval '1 minute' where id = v_t2; set local role authenticated;
+  perform pg_temp.act(H);
   insert into public.cohosts (diwaniya_id, user_id) values (v_d, C);
   reset role; perform pg_temp.accept_cohost(v_d, C); set local role authenticated;
   -- G checks in tonight, then an earlier game of the season
@@ -197,6 +201,8 @@ begin
              where tb->>'game' = 'trix' and (st->>'team')::int <> (st->>'seat')::int) then
     raise exception 'FAIL: (4) trix seats wrong: %', v_j; end if;
   if (v_j->>'no')::int <> 1 then raise exception 'FAIL: (4) first draw numbered %', v_j->>'no'; end if;
+  if v_j->'tables'->0->>'label' <> 'Table A' or v_j->'tables'->1->>'label' <> 'Table B' then
+    raise exception 'FAIL: (4) draw tables not in the TV''s order (by label): %', v_j->'tables'; end if;
   perform pg_temp.act(C);
   v_j := public.tv_draw(v_n, v_names);
   if (v_j->>'no')::int <> 2 then raise exception 'FAIL: (4) co-host draw numbered %', v_j->>'no'; end if;

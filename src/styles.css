@@ -4405,6 +4405,7 @@ html,
   font-size: clamp(2.25rem, 12vw, 3.25rem);
   font-weight: 700;
   letter-spacing: 0.22em;
+  padding-inline-start: 0.22em; /* balances the last letter's tracking so the code sits centred */
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   color: var(--saffron-ink);
@@ -4434,7 +4435,7 @@ html,
 
 .draw-pick {
   border: 0;
-  margin: 0;
+  margin: 12px 0 0;
   padding: 0;
   min-width: 0;
 }
@@ -4491,6 +4492,7 @@ html,
 }
 .draw-add {
   align-items: end;
+  margin-top: 8px;
 }
 
 .draw-result {

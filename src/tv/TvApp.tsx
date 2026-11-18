@@ -314,7 +314,7 @@ function Board({ t, lang, board, offline, realtime, onLang, onExit }: { t: TvCop
           <Crown t={t} names={board.crown} />
           <Season t={t} rows={board.season} />
           <Last t={t} board={board} />
-          {board.draw && <DrawSummary t={t} draw={board.draw} />}
+          {board.draw && Date.now() - new Date(board.draw.at).getTime() < 90 * 60_000 && <DrawSummary t={t} draw={board.draw} />}
         </aside>
       </div>
     </main>
@@ -494,13 +494,50 @@ function Season({ t, rows }: { t: TvCopy; rows: TvBoard['season'] }) {
   );
 }
 
+/** The latest draw, small, beside the table: one line per team ("Team 1: Ali · Fahad"). */
 function DrawSummary({ t, draw }: { t: TvCopy; draw: Draw }) {
   return (
     <section className="tv-drawsum" aria-labelledby="tv-drawsum-t">
       <h2 id="tv-drawsum-t" className="tv-h2">
-        {t.draw} <span className="tv-muted">· {t.drawNo(draw.no)}</span>
+        {t.draw} <span className="tv-muted">· {t.drawShort(draw.no)}</span>
       </h2>
-      <DrawTables t={t} draw={draw} animate={false} />
+      <ul className="tv-drawsum__list">
+        {draw.tables.map((tb, i) => {
+          const teams = [...new Set(tb.seats.map((s) => s.team))].sort((a, b) => a - b);
+          return (
+            <li key={i}>
+              <span className="tv-drawsum__table">
+                <bdi>{t.table(tb.label, i)}</bdi>
+              </span>
+              {teams.map((team) => (
+                <span key={team} className={`tv-drawsum__team tv-drawsum__team--t${Math.min(team, 4)}`}>
+                  {tb.seats
+                    .filter((s) => s.team === team)
+                    .map((s, j) => (
+                      <bdi key={s.seat}>
+                        {j > 0 && ' · '}
+                        {s.name}
+                      </bdi>
+                    ))}
+                </span>
+              ))}
+            </li>
+          );
+        })}
+        {draw.waiting.length > 0 && (
+          <li>
+            <span className="tv-drawsum__table">{t.waiting}</span>
+            <span className="tv-drawsum__team">
+              {draw.waiting.map((n, j) => (
+                <bdi key={`${n}-${j}`}>
+                  {j > 0 && ' · '}
+                  {n}
+                </bdi>
+              ))}
+            </span>
+          </li>
+        )}
+      </ul>
     </section>
   );
 }

@@ -758,7 +758,7 @@ const ar = {
     cardCrown: 'تاج الشهر',
     cardResults: 'النتائج',
     cardBeat: 'فاز على',
-    cardMe: (w: number, p: number, fmt: Fmt) => `أنت: ${fmt(w)} من ${fmt(p)}`,
+    cardMe: (w: number, p: number, fmt: Fmt) => `فوزك: ${fmt(w)} من ${fmt(p)}`,
     cardFile: 'بطاقة-الليلة',
   },
 };
@@ -1504,7 +1504,7 @@ const en: Copy = {
     cardCrown: "This month's crown",
     cardResults: 'Results',
     cardBeat: 'beat',
-    cardMe: (w, p, fmt) => `You: ${fmt(w)} of ${fmt(p)}`,
+    cardMe: (w, p, fmt) => `Your wins: ${fmt(w)} of ${fmt(p)}`,
     cardFile: 'night-card',
   },
 };

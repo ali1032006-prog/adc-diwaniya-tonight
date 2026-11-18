@@ -138,7 +138,13 @@ export async function drawNightCard(t: CardText, doc: Document = document): Prom
 
   let y = 150;
   ctx.fillStyle = C.ink;
-  ctx.font = `700 76px ${FONT}`;
+  // a long name steps down to 52px before it is shortened
+  let size = 76;
+  ctx.font = `700 ${size}px ${FONT}`;
+  while (size > 52 && ctx.measureText(t.name).width > inner) {
+    size -= 4;
+    ctx.font = `700 ${size}px ${FONT}`;
+  }
   ctx.fillText(fit(ctx, t.name, inner), start, y);
   y += 56;
   ctx.fillStyle = C.muted;

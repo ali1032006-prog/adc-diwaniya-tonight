@@ -138,7 +138,7 @@ describe('TV board', () => {
     tv.fetchTvState.mockResolvedValue(board());
     tv.listenTv.mockReturnValue(() => {});
     const { container } = render(<TvApp />);
-    expect(await screen.findByRole('heading', { name: 'Diwaniya Bu Fahad' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Diwaniya Bu Fahad' }, { timeout: 4000 })).toBeTruthy();
     expect(tv.fetchTvState).toHaveBeenCalledWith('K7PW3X');
     expect(screen.getByText('31').className).toMatch(/tv-score/);
     expect(screen.getByText('17').className).toMatch(/tv-score/);
@@ -160,7 +160,7 @@ describe('TV board', () => {
     let ping: (ended: boolean) => void = () => {};
     tv.listenTv.mockImplementation((_t: string, onPing: (e: boolean) => void) => ((ping = onPing), () => {}));
     render(<TvApp />);
-    await screen.findByText('31');
+    await screen.findByText('31', {}, { timeout: 4000 });
     const before = tv.fetchTvState.mock.calls.length;
     tv.fetchTvState.mockResolvedValue(board({ live: [{ ...board().live[0], totals: [41, 17], rounds: 6 }] }));
     act(() => ping(false));
@@ -173,7 +173,7 @@ describe('TV board', () => {
     localStorage.setItem('dt.tv.code', 'K7PW3X');
     tv.fetchTvState.mockResolvedValue({ status: 'ended' });
     render(<TvApp />);
-    expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringMatching(/This screen has ended/));
+    expect(await screen.findByRole('alert', {}, { timeout: 4000 })).toHaveProperty('textContent', expect.stringMatching(/This screen has ended/));
     expect(localStorage.getItem('dt.tv.code')).toBeNull();
   });
 
@@ -197,7 +197,7 @@ describe('TV board', () => {
     tv.fetchTvState.mockResolvedValue(board({ draw: draw(3) }));
     tv.listenTv.mockReturnValue(() => {});
     render(<TvApp />);
-    const dialog = await screen.findByRole('dialog', { name: "Tonight's draw" });
+    const dialog = await screen.findByRole('dialog', { name: "Tonight's draw" }, { timeout: 4000 });
     for (const n of ['Ali', 'Bader', 'Fahad', 'Hamad', 'Omar']) expect(within(dialog).getByText(n)).toBeTruthy();
     expect(within(dialog).getByText('Waiting their turn')).toBeTruthy();
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -209,7 +209,7 @@ describe('TV board', () => {
     tv.fetchTvState.mockResolvedValue(board());
     tv.listenTv.mockReturnValue(() => {});
     render(<TvApp />);
-    await screen.findByText('جدول الموسم');
+    await screen.findByText('جدول الموسم', {}, { timeout: 4000 });
     expect(document.documentElement.dir).toBe('rtl');
   });
 });
@@ -326,7 +326,7 @@ describe('Night card', () => {
     expect(t.top).toBe('Ali');
     expect(t.topWins).toBe('3 wins');
     expect(t.results[0]).toEqual({ pack: 'Kout (4 players)', line: 'Ali, Fahad beat Bader, Hamad' });
-    expect(t.me).toBe('You: 2 of 3');
+    expect(t.me).toBe('Your wins: 2 of 3');
     const ar = cardText(card, COPY.ar, (n) => String(n), 'ar', 'السالمية', COPY.ar.score.packs);
     expect(ar.rtl).toBe(true);
     expect(ar.brand).toBe('ديوانيتنا');

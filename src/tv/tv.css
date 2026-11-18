@@ -671,6 +671,39 @@ bdi {
 }
 
 /* ---------------------------------------------------------------- the draw */
+.tv-drawsum__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 1rem;
+}
+.tv-drawsum__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.75rem;
+}
+.tv-drawsum__table {
+  font-weight: 700;
+  min-width: 2.5rem;
+}
+.tv-drawsum__team {
+  padding-inline-start: 0.55rem;
+  border-inline-start: 2px solid var(--hairline);
+  font-weight: 500;
+}
+.tv-drawsum__team--t1 {
+  border-color: var(--madder);
+}
+.tv-drawsum__team--t2 {
+  border-color: var(--camel);
+}
+.tv-drawsum__team--t3 {
+  border-color: var(--saffron);
+}
 .tv-draw {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
@@ -736,7 +769,9 @@ bdi {
   align-items: center;
   justify-content: center;
   padding: 2rem clamp(1rem, 4vw, 4rem);
-  background: rgba(21, 17, 26, 0.94);
+  background: rgba(21, 17, 26, 0.95);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   overflow-y: auto;
   animation: tv-fade 360ms var(--ease-enter);
 }
