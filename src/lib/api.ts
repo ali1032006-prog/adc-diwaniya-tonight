@@ -106,10 +106,13 @@ export interface InboxRow {
 }
 export interface Standing {
   diwaniya_id: string;
-  user_id: string;
+  /** null for a walk-in: he has no account, so the league keeps him by name. */
+  user_id: string | null;
   name: string;
   played: number;
   wins: number;
+  /** The user id, or 'guest:<lower name>' for a walk-in (league_standings, ADC-LOG-754). */
+  player_key: string;
 }
 export interface PlayedGame {
   id: string;
@@ -477,9 +480,46 @@ export async function undoGame(gameId: string) {
 
 export async function standings(diwaniyaId: string): Promise<Standing[]> {
   const rows = unwrap(
-    await db().from('league_standings').select('diwaniya_id,user_id,name,played,wins').eq('diwaniya_id', diwaniyaId),
+    await db().from('league_standings').select('diwaniya_id,user_id,name,played,wins,player_key').eq('diwaniya_id', diwaniyaId),
   ) as Standing[];
   return rankStandings(rows);
+}
+
+/** People a scorer may name at this diwaniya (and table): linked by account instead of typed. */
+export interface RosterPerson {
+  id: string;
+  name: string;
+  seat: number | null;
+}
+export async function scoreRoster(diwaniyaId: string, tableId: string | null): Promise<RosterPerson[]> {
+  return ((unwrap(await db().rpc('score_roster', { p_diwaniya: diwaniyaId, p_table: tableId })) as RosterPerson[]) ?? []);
+}
+
+/** My diwaniyas (S11 tab inside League, item 6): followed, regular, visited or requested tonight, with tonight's state. */
+export interface MyDiwaniya {
+  id: string;
+  name: string;
+  area: string;
+  visibility: 'public' | 'followers';
+  why: ('follow' | 'regular' | 'visit' | 'tonight')[];
+  night_id: string | null;
+  starts_at: string | null;
+  open_seats: number | null;
+  need_one: boolean | null;
+  my_status: RequestStatus | null;
+  my_request: string | null;
+  my_table: string | null;
+  seated_table: string | null;
+}
+export async function myDiwaniyaList(): Promise<MyDiwaniya[]> {
+  return ((unwrap(await db().rpc('my_diwaniyas')) as MyDiwaniya[]) ?? []);
+}
+
+/** Status of request rows (Inbox shows Approve/Decline only while a request still waits). */
+export async function requestStatuses(ids: string[]): Promise<Map<string, RequestStatus>> {
+  if (ids.length === 0) return new Map();
+  const rows = unwrap(await db().from('requests').select('id,status').in('id', ids)) as { id: string; status: RequestStatus }[];
+  return new Map(rows.map((r) => [r.id, r.status]));
 }
 
 /** Most wins first, then the better win rate, then fewer games, then name. */
@@ -513,10 +553,10 @@ export function monthlyCrown(games: PlayedGame[], now = new Date()): string[] {
   return top === 0 ? [] : [...wins].filter(([, w]) => w === top).map(([n]) => n).sort();
 }
 
-/** Diwaniyas whose league I can open: ones I run, follow, or have played at. */
-export async function leagueDiwaniyas(): Promise<DiwaniyaLite[]> {
-  const [mine, followed] = await Promise.all([myDiwaniyas(), listFollowed()]);
-  const all = [...mine, ...followed];
+/** Diwaniyas whose league I can open: ones I run, follow, am a regular of, or have played at. */
+export async function leagueDiwaniyas(): Promise<{ id: string; name: string }[]> {
+  const [mine, others] = await Promise.all([myDiwaniyas(), myDiwaniyaList()]);
+  const all = [...mine, ...others].map((d) => ({ id: d.id, name: d.name }));
   return all.filter((d, i) => all.findIndex((x) => x.id === d.id) === i);
 }
 

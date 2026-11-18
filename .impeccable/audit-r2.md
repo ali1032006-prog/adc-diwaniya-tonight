@@ -93,3 +93,99 @@ Pass. The round's new surfaces are built from the system, not beside it: the inv
 5. **[P3] /impeccable adapt**: 24px Terms link.
 6. **[P3] /impeccable harden**: unhide brings back the person's diwaniyas.
 7. **/impeccable polish**: final pass.
+
+---
+
+# Re-run before the 2/3 handoff: Ali's change list (ADC-LOG-754)
+
+Run by hand again from `reference/audit.md` (every section), with `reference/craft-floor.md` read before the UI edits. Target: `fix/ADC-TSK-36-r2` after the seven items (area dropdown + My area filter, Me/S9 regrouped, league fix, guest scoring, map location, My diwaniyas, fewer taps). Evidence: the hash preview of this commit for signed-out routes, and a local render harness (git-excluded `vite.harness.config.ts` that swaps `api.ts`/`supabase.ts` for mocks, never deployed) for every signed-in screen, because the Issue 52 hold still forbids reviewer or test accounts. Rendered: 8 signed-in routes x 9 sizes (72 measures, Arabic RTL) plus English at 320x568, 844x390, 1280x800 and the night theme; synthesized touch drag on the map (Chrome CDP touch events, emulated 390x844 phone); keyboard on the League tabs. Untested: a physical phone, and real data on dev (the SQL tests and Ali's own two games stand in for it).
+
+## Audit Health Score
+
+| # | Dimension | Score | Key Finding |
+|---|-----------|-------|-------------|
+| 1 | Accessibility | 3 | League view switch was role=tablist without arrow keys; repeated "Approve"/"Score a game" names with no context |
+| 2 | Performance | 4 | Map asks only the tiles in view (6 at 390x240, z16); no map library; `will-change` left on the tile layer at rest |
+| 3 | Theming | 4 | New UI on existing tokens (madder pill, camel rims, saffron seats); map overlay colours fixed on purpose (tiles are always light) |
+| 4 | Responsive Design | 3 | S9 sections pushed past the left edge in RTL (the jump row's nowrap width sized the grid column); My diwaniyas cards stretched with gaps at 844x390 |
+| 5 | Implementation Integrity | 4 | Seven items built from the shared panel, chip, status and link-row patterns; one new shared piece (SectionIndex) used by both long pages |
+| **Total** | | **18/20** | **Excellent (minor polish)** |
+
+## Implementation Integrity Verdict
+
+Pass. The league bug was fixed at its root (the season view dropped every typed-name row), not papered over in the screen; the new score sheet links people from `score_roster` so names and accounts stop drifting apart. The map is drawn from OSM tiles by our own 300-line component instead of a library, which keeps the CSP to one image host and the bundle flat. Area pickers are native selects grouped by governorate, so phones open their own picker. Me and S9 share one SectionIndex pattern; the League switch reuses the nav's sliding-pill motion.
+
+## Executive Summary
+
+- Audit Health Score: **18/20** (Excellent), up from 16/20.
+- Issues: P0 0, P1 1, P2 3, P3 2.
+- Top issues: S9 clipped in RTL (P1); League tabs without arrow keys (P2); repeated button names (P2); My diwaniyas cards stretched in landscape (P2); Your night name alignment in LTR (P3); Arabic count agreement on Tonight's count line (P3).
+- Next steps: all fixed in the polish pass below; the rendered look on real signed-in accounts stays owed until Ali rules on Agent Issue 52.
+
+## Detailed Findings by Severity
+
+**[P1] S9 sections run past the left edge in Arabic**
+- Location: `src/screens/Settings.tsx` `.settings` grid, `src/styles.css` (`.settings`)
+- Category: Responsive
+- Impact: every S9 field and the Save buttons were cut off on the left at every phone size; no scrollbar, because the shell clips x.
+- WCAG/Standard: 1.4.10 Reflow
+- Recommendation: `grid-template-columns: minmax(0, 1fr)` on `.settings` and `min-width: 0` on the jump row.
+- Suggested command: /impeccable adapt
+
+**[P2] League view switch: tabs without arrow keys**
+- Location: `src/screens/League.tsx` LeagueBody
+- Category: Accessibility
+- Impact: keyboard and screen-reader users expect arrows between tabs and one tab stop.
+- WCAG/Standard: ARIA APG Tabs pattern; 2.1.1
+- Recommendation: roving tabindex, ArrowLeft/Right (mirrored in RTL), Home/End.
+- Suggested command: /impeccable harden
+
+**[P2] Same name on many buttons**
+- Location: Inbox Approve/Decline, Your night Sit now / Score a game / Open, Tonight card Request a seat, My diwaniyas Score a game
+- Category: Accessibility
+- Impact: a screen-reader list of buttons reads "Approve, Approve, Approve".
+- WCAG/Standard: 2.4.6, 2.4.9
+- Recommendation: aria-label that adds the diwaniya (and the time for inbox items).
+- Suggested command: /impeccable clarify
+
+**[P2] My diwaniyas cards stretch in two columns**
+- Location: `.mine__item` at 840px+ and 844x390
+- Category: Responsive
+- Impact: the shorter card spreads its lines apart to match its neighbour.
+- Recommendation: `align-content: start` on the card and its link.
+- Suggested command: /impeccable layout
+
+**[P3] Your night: Arabic name sits at the far edge in English**
+- Location: `.your-night__name`
+- Category: Responsive (bidi)
+- Impact: the name and its time line start on opposite sides.
+- Recommendation: wrap the `<bdi>` in a span and `justify-items: start`.
+- Suggested command: /impeccable polish
+
+**[P3] "٣ ديوانية مفتوحة الليلة"**
+- Location: `copy.ts` `tonight.live` (Arabic)
+- Category: Implementation Integrity (copy)
+- Impact: 3-10 take the plural in Arabic; this read as a mistake.
+- Recommendation: one/two/3-10/11+ agreement as in `arCount`.
+- Suggested command: /impeccable clarify
+
+Also checked and fine: contrast of the new text (status chips, saffron seat counts, map credit #1E1824 on 85% cream) in day and night; focus rings on every new control (section index, map, zoom, area chip remove, seg tabs); targets 36-44px (area chip remove 36x36, map buttons 40x40, tabs 44); reduced motion (pill and chips fade, no translate); no horizontal overflow at 72/72 measures after the fixes; map drag under touch pans the map and does not scroll the page, `pointercancel` clears the drag.
+
+## Patterns & Systemic Issues
+
+- Grid items that hold a horizontally scrolling row need `minmax(0, 1fr)` columns; `.screen__body` and `.panel` had it, new wrappers did not. Rule kept in the polish notes.
+- Repeated action buttons in lists need names with their row's subject; added on every new list.
+
+## Positive Findings
+
+- One shared jump row (SectionIndex) for both long settings pages, buttons not #anchors so the hash router is never confused.
+- Map that honours the OSM policy by construction: tiles in view only, Referer per tile, attribution never hidden, CSP widened by exactly one image host.
+- The score sheet now prevents the two errors Ali's test games show (typed own name, same player twice) before the server refuses them.
+
+## Recommended Actions
+
+1. **[P1] `/impeccable adapt`**: fix the S9 grid column in RTL.
+2. **[P2] `/impeccable harden`**: arrow keys on the League tabs.
+3. **[P2] `/impeccable clarify`**: context in repeated button names; Arabic count agreement.
+4. **[P2] `/impeccable layout`**: My diwaniyas cards in two columns.
+5. **[P3] `/impeccable polish`**: Your night name alignment, then the polish pass.

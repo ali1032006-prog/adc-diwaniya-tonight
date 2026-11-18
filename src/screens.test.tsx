@@ -139,9 +139,9 @@ describe('pure helpers', () => {
   });
   it('ranks the season by wins, then win rate, then fewer games', () => {
     const rows: Standing[] = [
-      { diwaniya_id: DW, user_id: 'a', name: 'A', played: 10, wins: 5 },
-      { diwaniya_id: DW, user_id: 'b', name: 'B', played: 6, wins: 5 },
-      { diwaniya_id: DW, user_id: 'c', name: 'C', played: 3, wins: 7 },
+      { diwaniya_id: DW, user_id: 'a', name: 'A', played: 10, wins: 5, player_key: 'a' },
+      { diwaniya_id: DW, user_id: 'b', name: 'B', played: 6, wins: 5, player_key: 'b' },
+      { diwaniya_id: DW, user_id: 'c', name: 'C', played: 3, wins: 7, player_key: 'c' },
     ];
     expect(rankStandings(rows).map((r) => r.user_id)).toEqual(['c', 'b', 'a']);
   });

@@ -2549,3 +2549,473 @@ h2[id] {
     align-items: start;
   }
 }
+
+/* ===================== Ali's change list (ADC-LOG-754) ===================== */
+
+/* (1) Area pickers: the native select per area, chosen ping areas as removable chips */
+.area-multi {
+  display: grid;
+  gap: 8px;
+}
+.area-multi__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.area-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-inline-start: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--camel);
+  background: var(--raised);
+  font-size: 0.875rem;
+  animation: fade-up 160ms var(--ease-enter) both;
+}
+.area-chip__x {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.area-chip__x:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -4px;
+}
+
+/* (5) Map: OSM tiles drawn into a clipped box; the pin's point sits on the spot */
+.map {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--hairline);
+  background: var(--raised);
+  isolation: isolate;
+}
+.map--picker {
+  touch-action: none;
+  cursor: crosshair;
+}
+.map--picker:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.map__tiles {
+  position: absolute;
+  inset: 0;
+}
+.map__tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+  user-select: none;
+  pointer-events: none;
+}
+.map__pin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: -34px 0 0 -18px;
+  color: var(--madder);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+  animation: pin-drop 220ms var(--ease-enter) both;
+}
+@keyframes pin-drop {
+  from {
+    opacity: 0;
+    translate: 0 -10px;
+  }
+}
+.map__cross {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 999px;
+  border: 2px solid rgba(21, 17, 26, 0.55);
+  pointer-events: none;
+}
+.map__zoom {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  display: grid;
+  gap: 4px;
+}
+.map__btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.map__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.map__credit {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  margin: 0;
+  padding: 2px 6px;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: #1e1824;
+  background: rgba(255, 250, 244, 0.85);
+  border-start-start-radius: 6px;
+  direction: ltr;
+}
+.map__credit a {
+  color: inherit;
+}
+.map-picker {
+  display: grid;
+  gap: 8px;
+}
+.pin-card .map {
+  margin-block: 4px 8px;
+}
+
+/* (7) Your night: the actions waiting for you tonight, under the app bar */
+.your-night {
+  display: grid;
+  gap: 8px;
+}
+.your-night__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.your-night__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 1px solid var(--madder);
+  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.5);
+  animation: fade-up 200ms var(--ease-enter) both;
+}
+.your-night__name {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+  min-height: 44px;
+  align-content: center;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 700;
+}
+.your-night__acts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.your-night__acts:empty {
+  display: none;
+}
+.night-card__act {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 0;
+  padding-inline: 4px;
+}
+.card-wrap {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+/* (6) League: My diwaniyas / Season, a two-way switch whose pill slides */
+.seg-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  isolation: isolate;
+}
+.seg-tabs__tab {
+  position: relative;
+  z-index: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 200ms var(--ease-standard);
+}
+.seg-tabs__tab[aria-selected='true'] {
+  color: var(--madder-ink);
+}
+.seg-tabs__tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.seg-tabs__pill {
+  position: absolute;
+  z-index: 0;
+  top: 4px;
+  bottom: 4px;
+  inset-inline-start: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: var(--madder);
+  transform: translateX(calc(var(--i) * 100% * var(--dir)));
+  transition: transform 250ms var(--ease-standard);
+}
+.seg-panel {
+  animation: fade-up 200ms var(--ease-enter) both;
+}
+.mine {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 840px) {
+  .mine {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.mine__item {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+}
+.mine__item--open {
+  border-color: var(--camel);
+}
+.mine__main {
+  display: grid;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.mine__name {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+.mine__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.mine__why {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mine__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.mine__open {
+  font-weight: 500;
+}
+.mine__seats {
+  color: var(--saffron-ink);
+  font-variant-numeric: tabular-nums;
+}
+.mine__act {
+  justify-self: start;
+}
+.season-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+.season-head .field {
+  flex: 1 1 200px;
+  margin: 0;
+}
+.standings__guest {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.tag--quiet {
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  padding: 0 8px;
+}
+
+/* (3)(4) Score: a seat is a person from the room, or a typed walk-in */
+.seat-pick-field {
+  display: grid;
+  gap: 6px;
+}
+.seat-pick-field--dup .input {
+  border-color: var(--madder);
+  box-shadow: 0 0 0 1px var(--madder);
+}
+
+/* (2) Long pages: a jump row of sections, then labelled sections */
+.section-index {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: -8px -20px 0;
+  padding: 8px 20px;
+  background: var(--ground);
+  border-bottom: 1px solid var(--hairline);
+}
+.section-index__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.section-index__list::-webkit-scrollbar {
+  display: none;
+}
+.section-index__btn {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.section-index__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .section-index__btn:hover {
+    border-color: var(--camel);
+  }
+}
+.settings,
+.settings__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.section-index {
+  min-width: 0;
+}
+.settings__fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.settings__section,
+#me-account,
+#me-pings,
+#me-privacy,
+#me-data,
+#me-delete {
+  scroll-margin-top: 72px;
+}
+.panel__title svg {
+  vertical-align: -3px;
+}
+.quick-prefs__grid {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 840px) {
+  .quick-prefs__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+button.link-row {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+button.link-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* (7) Inbox: a waiting request is answered in place */
+.inbox__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 14px;
+  padding-inline-start: 60px;
+  border-radius: 0 0 12px 12px;
+  background: var(--surface);
+}
+.inbox li:has(.inbox__acts) > .inbox__item {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+  background: var(--surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-tabs__pill {
+    transition: none;
+  }
+  .seg-panel,
+  .your-night__item,
+  .area-chip,
+  .map__pin {
+    animation: fade-in 120ms linear both;
+  }
+}
+.mine__item,
+.mine__main {
+  align-content: start;
+}

@@ -78,8 +78,10 @@ export function tabOf(r: Route, from: Tab = 'tonight'): Tab {
     case 'place':
       return from === 'diwaniya' || from === 'inbox' ? from : 'tonight';
     case 'settings':
-    case 'score':
       return 'diwaniya';
+    case 'score':
+      // Hosts score from the Diwaniya tab, guests from Tonight or League (ADC-LOG-754 item 4).
+      return from === 'tonight' || from === 'league' ? from : 'diwaniya';
     case 'pings':
     case 'admin':
       return 'me';

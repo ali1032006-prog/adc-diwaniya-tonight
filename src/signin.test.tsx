@@ -205,10 +205,10 @@ describe('S3 profile setup', () => {
     const refresh = vi.fn(async () => {});
     ui(<ProfileSetup />, { status: 'needsProfile', userId: 'u1', refresh });
     fireEvent.change(screen.getByLabelText(en.profile.name), { target: { value: 'Faisal' } });
-    fireEvent.change(screen.getByLabelText(en.profile.area, { exact: false }), { target: { value: 'Salmiya' } });
+    fireEvent.change(screen.getByLabelText(en.profile.area, { exact: false }), { target: { value: 'السالمية' } });
     expect((screen.getByRole('checkbox', { name: /Terms and Privacy Policy/ }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: en.profile.finish }));
-    await waitFor(() => expect(api.completeProfile).toHaveBeenCalledWith('Faisal', 'Salmiya', '1990-04-04', true));
+    await waitFor(() => expect(api.completeProfile).toHaveBeenCalledWith('Faisal', 'السالمية', '1990-04-04', true));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(auth.pendingRegister()).toBeNull();
   });
@@ -217,7 +217,7 @@ describe('S3 profile setup', () => {
     const { container } = ui(<ProfileSetup />, { status: 'needsProfile', userId: 'u1' });
     expect(screen.getAllByRole('checkbox')).toHaveLength(1);
     fireEvent.change(screen.getByLabelText(en.profile.name), { target: { value: 'Faisal' } });
-    fireEvent.change(screen.getByLabelText(en.profile.area, { exact: false }), { target: { value: 'Salmiya' } });
+    fireEvent.change(screen.getByLabelText(en.profile.area, { exact: false }), { target: { value: 'السالمية' } });
     fireEvent.change(container.querySelector('input[type=date]') as HTMLInputElement, { target: { value: '1990-04-04' } });
     expect((screen.getByRole('button', { name: en.profile.finish }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('checkbox', { name: /Terms and Privacy Policy/ }));

@@ -8,6 +8,7 @@ import { useAction } from '../lib/useAsync';
 import { completeProfile, openSeats, type TableRow } from '../lib/api';
 import { currentFrom, go, href, hrefFor } from '../lib/router';
 import { clearPendingRegister, isAdult, pendingRegister } from '../lib/auth';
+import { AreaSelect } from './AreaSelect';
 import { BirthField, ConsentChecks } from './consent';
 
 /** A table's seats in ring order, open ones as null, mine marked. */
@@ -94,7 +95,7 @@ export function ProfileSetup() {
           <input className="input" required maxLength={40} value={name} onChange={(e) => setName(e.target.value)} autoComplete="nickname" />
         </Field>
         <Field label={c.profile.area} hint={c.profile.areaHint}>
-          <input className="input" required maxLength={60} value={area} onChange={(e) => setArea(e.target.value)} />
+          <AreaSelect required value={area} onChange={setArea} />
         </Field>
         <BirthField value={birth} onChange={setBirth} />
         <ConsentChecks terms={terms} onTerms={setTerms} />

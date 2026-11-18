@@ -7,7 +7,7 @@ import { NeedsAccount } from '../components/account';
 import { ErrorNote, Skeleton } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 import { useAction, useAsync } from '../lib/useAsync';
-import { listInbox, markRead, type InboxKind, type InboxRow } from '../lib/api';
+import { decideRequest, listInbox, markRead, requestStatuses, type InboxKind, type InboxRow } from '../lib/api';
 import { href, hrefFor } from '../lib/router';
 
 const ICON: Record<InboxKind, Icon> = {
@@ -45,11 +45,18 @@ export function Inbox() {
 
 function InboxBody() {
   const { t, c, fmt, time, date, err } = usePrefs();
-  const items = useAsync(listInbox, [], ['inbox']);
+  // Requests that still wait get Approve / Decline right here (fewer taps, ADC-LOG-754 item 7).
+  const items = useAsync(async () => {
+    const list = await listInbox();
+    const ids = list.filter((i) => i.kind === 'request' && i.request_id).map((i) => i.request_id!);
+    const waiting = await requestStatuses(ids).catch(() => new Map());
+    return { list, waiting };
+  }, [], ['inbox', 'requests']);
   const act = useAction();
   if (items.loading && !items.data) return <Skeleton rows={3} />;
   if (items.error != null && !items.data) return <ErrorNote text={err(items.error)} onRetry={items.reload} />;
-  const list = items.data ?? [];
+  const list = items.data?.list ?? [];
+  const waiting = items.data?.waiting ?? new Map();
   if (list.length === 0) {
     return (
       <EmptyState
@@ -110,6 +117,40 @@ function InboxBody() {
                   </span>
                 </span>
               </a>
+              {i.kind === 'request' && i.request_id && waiting.get(i.request_id) === 'pending' && (
+                <div className="inbox__acts">
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--small"
+                    disabled={act.busy}
+                    aria-label={`${c.board.approve} · ${i.diwaniya?.name ?? ''} · ${time(i.created_at)}`}
+                    onClick={() =>
+                      void act.run(async () => {
+                        await decideRequest(i.request_id!, true);
+                        if (!i.read_at) await markRead([i.id]);
+                        items.reload();
+                      })
+                    }
+                  >
+                    {c.board.approve}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--quiet btn--small"
+                    disabled={act.busy}
+                    aria-label={`${c.board.decline} · ${i.diwaniya?.name ?? ''} · ${time(i.created_at)}`}
+                    onClick={() =>
+                      void act.run(async () => {
+                        await decideRequest(i.request_id!, false);
+                        if (!i.read_at) await markRead([i.id]);
+                        items.reload();
+                      })
+                    }
+                  >
+                    {c.board.decline}
+                  </button>
+                </div>
+              )}
             </li>
           );
         })}

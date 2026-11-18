@@ -4,6 +4,8 @@ import { Screen } from './Tabs';
 import { SeatRing } from '../components/SeatRing';
 import { NeedsAccount, TableRing } from '../components/account';
 import { ErrorNote, Field, OkNote, Skeleton } from '../components/ui';
+import { AreaSelect } from '../components/AreaSelect';
+import { areaLabel } from '../lib/areas';
 import { usePrefs } from '../lib/prefs';
 import { useAction, useAsync } from '../lib/useAsync';
 import {
@@ -106,14 +108,14 @@ function CreateDiwaniya({ onCreated }: { onCreated: (id: string) => void }) {
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
-          void act.run(async () => onCreated((await createDiwaniya(name.trim(), area.trim())).id));
+          void act.run(async () => onCreated((await createDiwaniya(name.trim(), area)).id));
         }}
       >
         <Field label={c.board.name}>
           <input className="input" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label={c.profile.area} hint={c.profile.areaHint}>
-          <input className="input" required maxLength={60} value={area} onChange={(e) => setArea(e.target.value)} />
+          <AreaSelect required value={area} onChange={setArea} />
         </Field>
         {act.error != null && <ErrorNote text={err(act.error)} />}
         <button className="btn btn--primary" disabled={act.busy}>
@@ -213,6 +215,7 @@ function HostBoard({ dw, all, onPick }: { dw: Diwaniya; all: Diwaniya[]; onPick:
               </button>
             </div>
           </section>
+          <Requests dw={dw} night={night.data} />
           <ul className="tables">
             {night.data.tables.map((tb) => (
               <BoardTable
@@ -226,7 +229,6 @@ function HostBoard({ dw, all, onPick }: { dw: Diwaniya; all: Diwaniya[]; onPick:
             ))}
           </ul>
           <AddTable nightId={night.data.id} busy={act.busy} run={run} />
-          <Requests dw={dw} night={night.data} />
           <Announce nightId={night.data.id} />
         </>
       )}
@@ -477,7 +479,7 @@ function AddTable({ nightId, busy, run }: { nightId: string; busy: boolean; run:
 const ORDER: Record<RequestRow['status'], number> = { pending: 0, approved: 1, arrived: 2, no_show: 3, declined: 4, cancelled: 5 };
 
 function Requests({ dw, night }: { dw: Diwaniya; night: NightRow }) {
-  const { c, fmt, err } = usePrefs();
+  const { c, fmt, err, prefs } = usePrefs();
   const reqs = useAsync(() => listRequests(night.id), [night.id], ['requests']);
   const act = useAction();
   const run = (fn: () => Promise<unknown>) =>
@@ -503,7 +505,7 @@ function Requests({ dw, night }: { dw: Diwaniya; night: NightRow }) {
                 <bdi>{r.user?.display_name}</bdi>
               </a>
               <span className="muted small">
-                <bdi>{r.user?.area}</bdi> · {c.board.eta(c.common.minutes(r.eta_minutes, fmt))}
+                <bdi>{areaLabel(r.user?.area, prefs.lang)}</bdi> · {c.board.eta(c.common.minutes(r.eta_minutes, fmt))}
               </span>
               {r.note && (
                 <span className="small">
@@ -552,7 +554,7 @@ function Requests({ dw, night }: { dw: Diwaniya; night: NightRow }) {
 }
 
 function Followed() {
-  const { c, err } = usePrefs();
+  const { c, err, prefs } = usePrefs();
   const list = useAsync(listFollowed, []);
   return (
     <section className="panel" aria-labelledby="followed-t">
@@ -567,7 +569,7 @@ function Followed() {
             <a className="link-row" href={href.place(d.id)}>
               <bdi>{d.name}</bdi>
               <span className="muted small">
-                <bdi>{d.area}</bdi>
+                <bdi>{areaLabel(d.area, prefs.lang)}</bdi>
               </span>
             </a>
           </li>

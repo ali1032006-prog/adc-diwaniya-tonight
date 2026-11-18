@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Flag, LockSimple, MapPin, Heart, ShieldCheck, Crown } from '@phosphor-icons/react';
+import { Flag, LockSimple, MapPin, Heart, ShieldCheck, Crown, ChartBar, ArrowSquareOut } from '@phosphor-icons/react';
 import { PushBar, ErrorNote, OkNote, Sheet, Skeleton, Field } from '../components/ui';
 import { NeedsAccount, TableRing } from '../components/account';
 import { EmptyState } from '../components/EmptyState';
 import { DallahArt } from '../components/Art';
+import { MapView, googleMapsUrl } from '../components/Map';
+import { areaLabel } from '../lib/areas';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { useAction, useAsync } from '../lib/useAsync';
@@ -46,7 +48,7 @@ export function Place({ id }: { id: string }) {
 }
 
 function PlaceBody({ id }: { id: string }) {
-  const { c, t, time, err } = usePrefs();
+  const { c, t, time, err, prefs } = usePrefs();
   const { userId } = useSession();
   const data = useAsync(
     async () => {
@@ -85,7 +87,7 @@ function PlaceBody({ id }: { id: string }) {
           <bdi>{dw.name}</bdi>
         </h2>
         <p className="place__meta">
-          <MapPin size={16} aria-hidden="true" /> <bdi>{dw.area}</bdi>
+          <MapPin size={16} aria-hidden="true" /> <bdi>{areaLabel(dw.area, prefs.lang)}</bdi>
           {dw.usual_slot && <> · {c.place.usually(dw.usual_slot)}</>}
         </p>
         <p className="place__meta">
@@ -135,6 +137,7 @@ function PlaceBody({ id }: { id: string }) {
                 seatedHere={seatedAt?.id === tb.id}
                 seatedElsewhere={!!seatedAt && seatedAt.id !== tb.id}
                 member={!!approved || manager}
+                scoreHref={manager || seatedAt || active?.status === 'arrived' ? href.score(dw.id, tb.id) : null}
                 busy={act.busy}
                 onSit={(n) => doAct(() => checkIn(tb.id, n))}
                 onLeave={() => doAct(() => leaveSeat(tb.id))}
@@ -225,6 +228,8 @@ function TableBlock(p: {
   onSit: (seatNo: number) => void;
   onLeave: () => void;
   onQueue: (on: boolean) => void;
+  /** Managers and guests checked in tonight score this table (ADC-LOG-754 item 4). */
+  scoreHref: string | null;
 }) {
   const { c, fmt } = usePrefs();
   const tb = p.table;
@@ -250,6 +255,12 @@ function TableBlock(p: {
               ))}
             </div>
           )
+        )}
+        {p.scoreHref && (
+          <a className="btn btn--quiet btn--small" href={p.scoreHref}>
+            <ChartBar size={18} aria-hidden="true" />
+            {c.quick.scoreTable}
+          </a>
         )}
         <div className="queue">
           <p className="queue__title">
@@ -315,18 +326,20 @@ function PinCard({ diwaniyaId, night }: { diwaniyaId: string; night: NightRow })
       </p>
     );
   }
-  const maps = `https://www.google.com/maps/search/?api=1&query=${pin.data.lat},${pin.data.lng}`;
+  const at = { lat: Number(pin.data.lat), lng: Number(pin.data.lng) };
   return (
     <section className="panel pin-card" aria-labelledby="pin-t">
       <h2 id="pin-t" className="panel__title">
         <MapPin size={18} weight="fill" aria-hidden="true" /> {c.place.pinTitle}
       </h2>
+      <MapView at={at} />
       {pin.data.directions && (
         <p className="prose">
           <bdi>{pin.data.directions}</bdi>
         </p>
       )}
-      <a className="btn btn--primary" href={maps} target="_blank" rel="noopener noreferrer">
+      <a className="btn btn--primary" href={googleMapsUrl(at)} target="_blank" rel="noopener noreferrer">
+        <ArrowSquareOut size={18} aria-hidden="true" />
         {c.place.openMaps}
       </a>
     </section>
