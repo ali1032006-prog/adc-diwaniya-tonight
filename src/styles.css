@@ -3451,3 +3451,18 @@ html,
 #root {
   overflow-x: clip;
 }
+
+/* Sign-in is the first screen now: on a landscape phone the Google button must sit in the first
+   screen, so the logo (already seen in the launch) steps aside and the bar tightens. */
+@media (orientation: landscape) and (max-height: 499px) {
+  .screen--solo .signin__art {
+    display: none;
+  }
+  .screen--solo .appbar {
+    min-height: 48px;
+  }
+  .screen--solo .screen__body.signin {
+    padding-block-start: 12px;
+    gap: 14px;
+  }
+}

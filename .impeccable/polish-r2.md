@@ -104,3 +104,5 @@ Used each path in the local build and the harness at 320x568, 390x844, 844x390, 
 
 ## 5. Verify and finish
 Re-measured after the fixes: 117/117 (13 signed-in routes x 9 sizes) with no horizontal overflow and `innerWidth` equal to the emulated width, no target under 24px, no unnamed control, one h1 per screen and no heading jumps; contrast script clean in night and day (one false positive noted). `npm test` 117/117, `tsc -b` clean, `npm run build` clean, Semgrep 0, SQL 6/6 files green. The signed-out matrix on the hash preview is in the handoff numbers. Rendered look with real accounts still owed (Issue 52).
+
+After the first preview deploy (35a20d82): sign-in is now the app's first screen, and on a phone in landscape (844x390) its Google button sat below the first screen. Fixed at the narrowest level: under `(orientation: landscape) and (max-height: 499px)` the solo sign-in hides the logo (already seen in the launch) and tightens the bar; the button now ends at about 305px of 390 in Arabic and English, and at 506-531px of 568 at 320x568. Re-deployed and the 9-size matrix re-run on the new hash (handoff numbers).
