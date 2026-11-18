@@ -785,7 +785,7 @@ const en: Copy = {
     passwordHint: 'At least 8 characters.',
     show: 'Show password',
     emailSignIn: 'Sign in with email',
-    emailSignUp: 'Create account with email',
+    emailSignUp: 'Sign up with email',
     busy: 'One moment…',
     forgot: 'Forgot your password?',
     resetLead: 'Reset your password',
