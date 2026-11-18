@@ -520,3 +520,74 @@ Solo screens (sign-in, reset) are the only bars without a back button, so anythi
 1. **[P1] `/impeccable adapt`**: solo app bar column for the switch (done, 109dca7)
 2. **[P2] `/impeccable clarify`**: governorate summary and the missing-pick hint (done, 109dca7)
 3. **[P2] `/impeccable polish`**: final pass (polish-r2.md, change list 5 section)
+
+
+# Re-run before the 2/3 handoff: Diwaniya on the TV (ADC-RES-54, Ali's approval ADC-LOG-817, no QR code)
+
+Worked through `reference/audit.md` by hand, every dimension, on the real previews as the feature was built: https://f376975e.adc-diwaniya-tonight.pages.dev (3fc830c, first look), e256c23b (d30b146), a465af8b (219c2ae), ebd0e5ba (873c37f), 1e583fd0 (6f1bf52), and the final scan on this commit's preview (hash URL in the handoff). Data: a throwaway host and three guests on dev (`heimer.tv.smoke.*@example.com`, admin API, confirmed; a diwaniya with tonight's night, two tables, seats, three recorded games, a live sheet, a TV room), deleted afterwards. The host's session came from the public password grant and was put into the page's storage, never typed. The TV page was opened signed out (it never signs in) at 1280x720, 1920x1080 and 3840x2160 plus the 9 matrix sizes; the host's Diwaniya page and its three sheets (Show on TV, Tonight's draw, Night card) at the 9 sizes, Arabic and English, day and night themes. Old smart-TV browsers were simulated by blocking the modern bundle (the ES5 fallback drew the board after 6 s). A live round added on dev reached the TV through the broadcast in under 2.5 s.
+
+## Audit Health Score
+
+| # | Dimension | Score | Key Finding |
+|---|-----------|-------|-------------|
+| 1 | Accessibility | 4 | Score region announces from a stable container; the draw reveal takes focus and says how to go back; season table has scoped headers and a named player column; code input labelled, `aria-invalid` on a wrong code; 0 text under 4.5:1 (3:1 large) on the TV and in the three sheets, both themes |
+| 2 | Performance | 3 | No new dependency; TV entry 19 kB + the shared chunk (supabase-js, React, area names); polls every 30 s while the broadcast is up, 5 s while it is down, with backoff; animations on transform and opacity only |
+| 3 | Theming | 4 | TV reuses the app's woven-night tokens (dark only by choice: a room at night, 3 m away); host sheets on the shared tokens and components in both themes; the night card is an image with the same palette |
+| 4 | Responsive Design | 4 | No horizontal overflow at any size; the TV board fills exactly one screen at 1280x720, 1920x1080 and 3840x2160 (scrollHeight = innerHeight), one column below 1000 px |
+| 5 | Implementation Integrity | 4 | One public door (`tv_state`), a separate no-session client, data-free broadcast; host side built from `Sheet`, `.btn`, `.tag`, `Field`; the woven band, madder lead, saffron live dot and open seats, camel crown carry the world onto the TV |
+| **Total** | | **19/20** | **Excellent** |
+
+## Implementation Integrity Verdict
+
+Pass. The TV is a second page of the same product, not a bolt-on: it speaks the app's language (woven band, Readex Pro with tabular figures, madder for the team ahead, saffron for live and open seats, camel for the crown) at 10-foot scale. It cannot sign in and cannot see more than the scoreboard: its client keeps no session, and `tv_state` returns names and numbers only (the SQL test asserts no uuid, email, birth date or user/host id in the JSON). There is no QR code, QR library or QR string anywhere (tv.test.tsx asserts it over package.json, every source file, the TV page, the fallback and the migration).
+
+## Executive Summary
+
+- Audit Health Score: **19/20** (Excellent)
+- Issues: P0 0, P1 2 (fixed), P2 7 (fixed), P3 3 (1 fixed, 2 left by choice)
+- Top issues: the board did not fit one TV screen; the draw filled tables in an order the TV did not show; a cramped two-column board on a phone on its side
+- Next: none blocking; Jayce reviews the TV room's security in 2/3
+
+## Detailed Findings by Severity
+
+- **[P1] TV board taller than the TV** (fixed in d30b146 and 873c37f)
+  - Location: `src/tv/tv.css`, `src/tv/TvApp.tsx`
+  - Category: Responsive
+  - Impact: on 3fc830c the board scrolled at 1280x720 (814 px), 1920x1080 (1113) and 3840x2160 (2227); a TV with a remote cannot scroll, so the tables and results fell off the screen
+  - Recommendation: latest results to the side column, seats in one row per table on a wide screen, the big score at 9 rem, the draw summary in the results' place for 90 minutes, a 720p screen keeps the season's top 6. Re-measured: exactly one screen at all three TV sizes
+  - Suggested command: /impeccable layout
+- **[P1] Tonight's draw filled tables in an order the TV did not show** (fixed in 219c2ae, migration 20261118190716)
+  - Location: `public.tv_draw`
+  - Category: Implementation Integrity
+  - Impact: two tables added together had the same timestamp, so the draw's Table B could come first while the TV lists A first; the phone and the TV disagreed on who sits where
+  - Recommendation: order by label like the TV; `tv_room_test.sql` red first on d30b146
+  - Suggested command: /impeccable harden
+- **[P2] Score announcements on a remounting element** (fixed, 873c37f): `aria-live` sat on the number that re-keys on each change, so nothing was announced; moved to the teams container
+- **[P2] Draw reveal kept focus behind it, no way back named** (fixed, 873c37f): the overlay now takes focus, returns it on close and says "Press any key or tap to go back to the board"
+- **[P2] Long names cut on TV seats; head-to-head could run off a phone** (fixed, 873c37f): seats wrap, the rivalry line wraps anywhere
+- **[P2] Phone on its side got a cramped two-column board** (fixed, 6f1bf52): season names cut to "عبدال…" at 844x390; two columns now start at 1000 px
+- **[P2] Night card cut a long diwaniya name at 76 px** (fixed, 219c2ae): steps down to 52 px before shortening
+- **[P2] Copy** (fixed, d30b146): "3 ألعاب الليلة" repeated الليلة after "الليلة من"; "فاز" after two winners; Arabic counts for games and meetings; now "3 ألعاب حتى الآن", "الفوز:", proper plural forms
+- **[P2] "Copy the link with the code" wrapped to two lines at 320 (English)** (fixed, dfb8f3d): "Copy link" / "انسخ الرابط"
+- **[P3] Board visible through the draw overlay** (fixed, 219c2ae): 95 % ground plus an 8 px backdrop blur
+- **[P3] Reduced motion stops every TV animation** (left by choice): the score tick and the seat-by-seat reveal become instant; the state change is still the new number and the full list, which is what a shared screen needs
+- **[P3] The TV loads the app's shared chunk** (left): it carries supabase-js, React and the area names (about 126 kB gzipped, once); a laptop on HDMI is the target, old TVs get the ES5 fallback that loads nothing
+
+## Patterns & Systemic Issues
+
+A screen meant for across the room has a fixed height budget the phone screens never had: every block added to the TV board must be measured at 1280x720 first, and anything that grows with the night (results, draws, the season) needs a cap or a swap.
+
+## Positive Findings
+
+- The TV never signs in, even on the host's own laptop: its client has no storage, no refresh and no URL session detection (tv.test.tsx asserts it), and the broadcast it listens to carries no data.
+- Live: Realtime "مباشر" status; a round on dev reached the TV in under 2.5 s; polling takes over at 5 s if the socket drops, and the header says so.
+- Old smart-TV browsers: the ES5 fallback (text only, no innerHTML) showed the totals and the season with the modern bundle blocked.
+- Wake lock and an idle cursor for a laptop on HDMI; Full screen, English/العربية and Exit fade out when idle.
+- Show on TV, the draw and the night card are all one tap from the host's Tonight panel; guests who were at the night get the card on the diwaniya's page.
+
+## Recommended Actions
+
+1. **[P1] `/impeccable layout`**: TV board fits one screen (done, d30b146 + 873c37f)
+2. **[P1] `/impeccable harden`**: draw table order (done, 219c2ae)
+3. **[P2] `/impeccable adapt`**: one column below 1000 px; Copy link at 320 (done, 6f1bf52, dfb8f3d)
+4. **[P2] `/impeccable polish`**: final pass (polish-r2.md, TV room section)

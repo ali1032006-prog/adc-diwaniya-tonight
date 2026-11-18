@@ -203,3 +203,36 @@ Signed out: switched Arabic to English and back on Sign in, reloaded (choice kep
 ## 5. Verify and finish
 
 Signed out 18/18 and signed in 54/54 measures without overflow (innerWidth equal to the emulated width every time), one h1, no heading jumps, no unnamed control, no target under 24 px except the Terms checkbox (22 px inside its full-width label, as before). Tests 180/180 (src/ali5.test.tsx, 12, covers all three items), build, Semgrep clean. Diff read through: no debug output, no orphaned styles or strings.
+
+
+# Polish before the 2/3 handoff: Diwaniya on the TV (ADC-RES-54, ADC-LOG-817)
+
+Worked through `reference/polish.md` by hand, every step, on the real previews listed in audit-r2.md (TV room section), with the throwaway host and guests on dev (deleted after).
+
+## 1. Establish the system
+
+The TV is new surface in the existing woven-night world (`.impeccable/direction.md`): it copies the app's colour roles and type into its own small stylesheet (`src/tv/tv.css`) instead of loading the whole app stylesheet, because the TV page has no app shell, nav or sheets. Host side reuses `Sheet`, `Field`, `.btn--primary/--quiet/--danger`, `.tag`, `.setting__label` and the Phosphor regular weight. Drift classified: the draw table order was a local defect in the RPC (fixed at the source, with a test); the TV's results list under the tables was a conceptual mismatch with a one-screen board (moved to the side column); the long "copy the link with the code" label was a local defect.
+
+## 2. Gather the evidence
+
+TV: typed the code with the wrong case and a space (cleaned to `3FCHHX`), watched the board in Arabic, switched to English and back, added a round on dev and saw it land through the broadcast, made a draw on the phone and watched the reveal take over the TV, closed it with a key, blocked the modern bundle to see the ES5 fallback. Host phone: opened Show on TV (code, link, copy, new code, stop), Tonight's draw (seated and arrived ticked, added a name, drew, result animated), Night card (1080x1350 PNG drawn on the phone, share sheet or save). Sizes: TV page at 11 sizes (9 + 1280x720 + 3840x2160), host page at 9, the three sheets at 320x568 and 1280x800, both themes and languages.
+
+## 3. Triage
+
+1. Blocked or misleading: the draw/TV table order (fixed in the RPC). Nothing else blocked.
+2. States: TV code screen (empty, checking, unknown code, ended, too many tries, offline), board (no live game, no tables, no season yet, no crown yet, offline/refreshing status), draw (fewer than two names disables Draw and says why; nobody seated says to add names), night card (making, failure with retry, share cancelled is not an error, save fallback), Show on TV (no room yet, room, stopped).
+3. Layout: the TV board's height budget (fixed), two columns only from 1000 px (fixed), long names (wrap).
+4. Motion: one authored moment per surface. TV: the score ticks up (transform + opacity, 520 ms ease-out) and the draw lands seat by seat (260 ms stagger); phone: the code fades up, the draw result lands seat by seat (140 ms stagger). The live dot pulses slowly. All of it stops under `prefers-reduced-motion`.
+5. Cleanup: no debug output, no unused imports (tsc clean), no new dependency, no QR anything; scratch smoke script kept out of the repo.
+
+## 4. Polish the whole path
+
+- Flow and hierarchy: TV reads diwaniya and night, then the live score biggest, then who plays and the rivalry, then the tables; the side column holds the crown, the season and the latest results (or tonight's draw). Phone: the screen panel sits under tonight's state, with Show on TV as the one primary.
+- Layout and type: 1 rem = 1.9vmin (never below 15 px) so 720p, 1080p and 4K read the same from across the room; the big score at 9 rem; tabular figures everywhere numbers stack.
+- Colour and icons: madder ring on the team ahead, saffron for live and open seats, camel crown drawn as our own SVG; Phosphor Television, Shuffle, ImageSquare, Copy, ArrowsClockwise, Stop, ShareNetwork, DownloadSimple on the phone, regular weight like the rest.
+- Interaction and state: the TV's buttons are 44 px or more and fade out with the cursor after 3 s; Exit forgets the code; a fresh draw takes over for 40 s or until a key or tap; the phone's draw names are 44 px toggles with a visible focus ring.
+- Content: Arabic counts (لعبة واحدة، لعبتان، ٣ ألعاب، ١١ لعبة), "الفوز:" before winners, "حتى الآن" for tonight's games, "فوزك: x من y" on the card; English to match.
+
+## 5. Verify and finish
+
+TV page 11/11 sizes without horizontal overflow, one screen exactly at 1280x720, 1920x1080 and 3840x2160; host Diwaniya page 9/9; the three sheets at 320x568 and 1280x800 without overflow; contrast scan 0 failures on the TV and the sheets (day and night themes). Tests 199/199 (tv.test.tsx 19), SQL 10/10 (tv_room_test.sql), build, Semgrep clean. Diff read through: no churn outside the feature, no orphaned styles or strings.
