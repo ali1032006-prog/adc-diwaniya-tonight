@@ -9,6 +9,7 @@ import { Place } from './screens/Place';
 import { Welcome } from './screens/Welcome';
 import { SignIn } from './screens/SignIn';
 import { Skeleton } from './components/ui';
+import { NewPassword } from './components/EmailAuth';
 import { Splash, SPLASHED } from './components/Logo';
 import { PrefsContext, loadPrefs, prefsDiff, savePrefs, type Prefs } from './lib/prefs';
 import { SessionProvider, useSession } from './lib/session';
@@ -124,7 +125,7 @@ export function PrefsSync() {
 
 function Shell() {
   const route = useRoute();
-  const { status } = useSession();
+  const { status, recovery } = useSession();
   const lastTab = useRef<Tab>('tonight');
   const active = tabOf(route, lastTab.current);
   // Launch (ADC-LOG-764 item 5): the logo plays once per visit before anything else shows.
@@ -167,6 +168,16 @@ function Shell() {
   }, []);
 
   if (splash) return <Splash onDone={endSplash} />;
+  // A password-reset link signed this browser in: choose the new password before anything else.
+  if (recovery && (status === 'ready' || status === 'needsProfile')) {
+    return (
+      <main className="screen screen--solo" key="new-password">
+        <div className="screen__body signin">
+          <NewPassword />
+        </div>
+      </main>
+    );
+  }
   if (route.name === 'welcome') {
     const to = route.from;
     return (

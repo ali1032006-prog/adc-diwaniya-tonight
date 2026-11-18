@@ -124,11 +124,14 @@ describe('routes', () => {
 });
 
 describe('S2 Sign in and Register', () => {
-  it('has no email or password form anywhere (ruling A)', () => {
+  it('offers email and password next to Google on both tabs (ADC-LOG-802)', () => {
     const { container } = ui(<SignIn mode="signin" />);
-    expect(container.querySelector('input[type=password], input[type=email]')).toBeNull();
+    expect(screen.getByRole('button', { name: en.signin.google })).toBeTruthy();
+    expect(container.querySelector('input[type=email][autocomplete=email]')).not.toBeNull();
+    expect(container.querySelector('input[type=password][autocomplete=current-password]')).not.toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: en.signin.tabRegister }));
-    expect(container.querySelector('input[type=password], input[type=email]')).toBeNull();
+    expect(screen.getByRole('button', { name: en.signin.googleUp })).toBeTruthy();
+    expect(container.querySelector('input[type=password][autocomplete=new-password]')).not.toBeNull();
   });
 
   it('Sign in goes straight to Google with the account chooser', async () => {

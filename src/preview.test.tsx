@@ -42,11 +42,12 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('preview test-account sign-in gate', () => {
-  it('the normal build has the flag off and the sign-in screen shows no password form', () => {
+  it('the normal build has the flag off and the sign-in screen shows no test-account form', () => {
     expect(__PREVIEW_SIGNIN__).toBe(false);
     const { container } = ui(<SignIn mode="signin" />);
     expect(container.querySelector(`[data-marker="${PREVIEW_SIGNIN_MARKER}"]`)).toBeNull();
-    expect(container.querySelector('input[type="password"]')).toBeNull();
+    // The public email form (ADC-LOG-802) has exactly one password field; the test form would add a second.
+    expect(container.querySelectorAll('input[type="password"]').length).toBe(1);
     expect(screen.queryByText(/test account/i)).toBeNull();
   });
 

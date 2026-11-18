@@ -2068,6 +2068,77 @@ fieldset.panel {
   color: var(--saffron-ink);
 }
 
+/* Email + password next to Google (ADC-LOG-802). */
+.signin__or {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}
+.signin__or::before,
+.signin__or::after {
+  content: '';
+  height: 1px;
+  background: var(--hairline);
+}
+.signin__forgot {
+  justify-self: center;
+}
+.signin__check {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  animation: fade-up 220ms var(--ease-enter) both;
+}
+.signin__check-icon {
+  color: var(--saffron-ink);
+}
+.signin__check p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.pw {
+  position: relative;
+  display: block;
+}
+.pw__input {
+  padding-inline-end: 52px;
+}
+.pw__toggle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 2px;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: color 150ms var(--ease-standard);
+}
+.pw__toggle[aria-pressed='true'] {
+  color: var(--ink);
+}
+.pw__toggle:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+@media (hover: hover) {
+  .pw__toggle:hover {
+    color: var(--ink);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .signin__check {
+    animation: none;
+  }
+}
+
 .consent {
   display: grid;
   gap: 8px;

@@ -7,7 +7,8 @@ import { BirthField, ConsentChecks } from '../components/consent';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { hrefFor } from '../lib/router';
-import { isAdult, savePendingRegister, startGoogle, takeReturnError } from '../lib/auth';
+import { LINK_ELSEWHERE, LINK_EXPIRED, isAdult, savePendingRegister, startGoogle, takeReturnError } from '../lib/auth';
+import { Divider, EmailRegister, EmailSignIn, ResetRequest } from '../components/EmailAuth';
 
 // Preview builds only (ADC-LOG-775): __PREVIEW_SIGNIN__ is a build-time constant (vite.config.ts).
 // In `npm run build` it is the literal false, so this import is compiled away and the test form's
@@ -32,8 +33,9 @@ export function GoogleButton({ label, disabled, busy, busyLabel, onClick }: {
 
 /**
  * S2 Sign in and Register (ADC-RES-50; Ali's rulings A-C, ADC-LOG-696/697): one screen, two tabs.
- * Google is the only way in. Register asks the age (18+) and the Terms first (no male checkbox,
- * Ali ADC-LOG-751); profile setup after Google asks them again and the server checks them for real.
+ * Google, or an email and a password (Ali's ruling ADC-LOG-802: Supabase's built-in mailer, confirm
+ * email ON, password reset). Register asks the age (18+) and the Terms first for both ways (no male
+ * checkbox, Ali ADC-LOG-751); profile setup asks them again and the server checks them for real.
  */
 export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: string }) {
   const { c, t, err } = usePrefs();
@@ -44,10 +46,14 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [returned] = useState(() => takeReturnError());
+  const [resetFor, setResetFor] = useState<string | null>(null);
   const ids = { tabs: useId(), a: useId(), b: useId() };
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  useEffect(() => setTab(mode), [mode]);
+  useEffect(() => {
+    setTab(mode);
+    setResetFor(null);
+  }, [mode]);
 
   if (session.status === 'needsProfile') {
     return (
@@ -137,13 +143,27 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
               ))}
             </div>
 
-            {returned && <ErrorNote text={c.signin.returnError} />}
+            {returned && (
+              <ErrorNote
+                text={
+                  returned === LINK_ELSEWHERE
+                    ? c.signin.linkElsewhere
+                    : returned === LINK_EXPIRED
+                      ? c.signin.linkExpired
+                      : c.signin.returnError
+                }
+              />
+            )}
 
-            {tab === 'signin' ? (
+            {resetFor !== null ? (
+              <ResetRequest initialEmail={resetFor} onBack={() => setResetFor(null)} />
+            ) : tab === 'signin' ? (
               <section className="panel signin__panel" role="tabpanel" id={ids.a} aria-labelledby={`${ids.tabs}-signin`} key="a">
                 <h2 className="signin__lead">{c.signin.signInLead}</h2>
                 <p className="muted">{c.signin.signInBody}</p>
                 <GoogleButton label={c.signin.google} busy={busy} busyLabel={c.signin.opening} onClick={() => void go_(false)} />
+                <Divider />
+                <EmailSignIn from={from} onForgot={(email) => setResetFor(email)} />
               </section>
             ) : (
               <section className="panel signin__panel" role="tabpanel" id={ids.b} aria-labelledby={`${ids.tabs}-register`} key="b">
@@ -166,12 +186,14 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
                     onClick={() => void go_(true)}
                   />
                 </form>
+                <Divider />
+                <EmailRegister ready={ready} from={from} onBeforeSend={() => savePendingRegister({ birth, terms })} />
               </section>
             )}
 
             {error && <ErrorNote text={error} />}
 
-            {TestSignIn && tab === 'signin' && (
+            {TestSignIn && tab === 'signin' && resetFor === null && (
               <Suspense fallback={null}>
                 <TestSignIn from={from} />
               </Suspense>

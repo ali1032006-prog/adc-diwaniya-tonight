@@ -9,7 +9,7 @@ if [ ! -d "$DIST/assets" ]; then
   exit 2
 fi
 found=0
-for marker in 'dt-preview-test-signin' 'Test accounts (preview builds only)' 'Sign in with test account' 'current-password'; do
+for marker in 'dt-preview-test-signin' 'Test accounts (preview builds only)' 'Sign in with test account'; do
   if grep -r -l -F -- "$marker" "$DIST" >/dev/null 2>&1; then
     echo "check_prod_bundle: FAIL, production bundle contains: $marker" >&2
     grep -r -l -F -- "$marker" "$DIST" >&2

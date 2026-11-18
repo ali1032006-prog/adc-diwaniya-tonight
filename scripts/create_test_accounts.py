@@ -3,8 +3,8 @@
 
   python3 scripts/create_test_accounts.py --check     key names present? (prints names and lengths only)
   python3 scripts/create_test_accounts.py --create    create/refresh the 4 accounts, profiles (18+, Terms), admins
-  python3 scripts/create_test_accounts.py --email-on  switch the dev project's email provider on (sign-up stays
-                                                      closed by the auth.users guard trigger) and probe it
+  python3 scripts/create_test_accounts.py --email-on  switch the dev project's email provider on (confirm email
+                                                      stays ON, ADC-LOG-802) and probe a wrong password
 
 DEV ONLY: refuses any project ref other than DIWANIYA_TONIGHT_DEV_SUPABASE_REF. Passwords are Ali's: they are
 read from the env file named by SUPABASE_ENV_FILE under the key names below and never printed, logged or sent.
@@ -152,10 +152,8 @@ def email_on():
           "| disable_signup:", cfg.get("disable_signup"))
     pub = E.get("DIWANIYA_TONIGHT_DEV_SUPABASE_PUBLISHABLE_KEY", "")
     h = {"apikey": pub}
-    code, out = http("POST", URL + "/auth/v1/signup", h, {"email": "stranger.probe@example.org", "password": "probe-" + "x" * 20})
-    print("public email sign-up probe:", code, (out or {}).get("msg") or (out or {}).get("error_code") or (out or {}).get("message"))
-    left = sql("select count(*) as n from auth.users where email = 'stranger.probe@example.org';")
-    print("probe user stored:", left)
+    # No public sign-up probe any more: since Ali's ruling ADC-LOG-802 email sign-up is public and every
+    # probe would spend one of the free mailer's ~2 emails an hour on a dead address.
     code, out = http("POST", URL + "/auth/v1/token?grant_type=password", h,
                      {"email": "vi.user.test@example.com", "password": "wrong-" + "y" * 20})
     print("wrong-password probe:", code, (out or {}).get("error_code") or (out or {}).get("msg"))

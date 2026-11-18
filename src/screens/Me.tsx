@@ -293,7 +293,7 @@ function AccountSection() {
       }}
     >
       <dl className="info">
-        {row(c.me.signIn, s.provider === 'google' ? 'Google' : (s.provider ?? '—'))}
+        {row(c.me.signIn, s.provider === 'google' ? 'Google' : s.provider === 'email' ? c.signin.email : (s.provider ?? '—'))}
         {row(c.me.email, s.email ?? '—')}
         {row(c.me.birth, date(`${priv.birth_date}T12:00:00+03:00`))}
         {row(c.me.memberSince, date(profile.created_at))}
