@@ -280,7 +280,7 @@ function Season({ id, name }: { id: string; name: string }) {
                 {g.results
                   .filter((r) => r.won)
                   .map((r) => r.name)
-                  .join('، ')}
+                  .join(c.common.sep)}
               </span>
               <span className="muted small">{g.undone_at ? c.league.undone : date(g.played_at)}</span>
             </li>

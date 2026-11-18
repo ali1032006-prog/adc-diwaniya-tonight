@@ -136,7 +136,7 @@ describe('(3) live scoring', () => {
     const board = await screen.findByRole('group', { name: en.score.total });
     expect(within(board).getByText('12')).toBeTruthy();
     expect(within(board).getByText(en.score.leading)).toBeTruthy();
-    expect(within(board).getByText('Ali، Bader')).toBeTruthy();
+    expect(within(board).getByText('Ali, Bader')).toBeTruthy();
     expect(api.openSheet).toHaveBeenCalledWith(DW, TB, ME);
     // the undone round stays listed, marked, without its undo button
     expect(screen.getByText(en.score.roundUndone)).toBeTruthy();

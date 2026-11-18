@@ -106,3 +106,35 @@ Used each path in the local build and the harness at 320x568, 390x844, 844x390, 
 Re-measured after the fixes: 117/117 (13 signed-in routes x 9 sizes) with no horizontal overflow and `innerWidth` equal to the emulated width, no target under 24px, no unnamed control, one h1 per screen and no heading jumps; contrast script clean in night and day (one false positive noted). `npm test` 117/117, `tsc -b` clean, `npm run build` clean, Semgrep 0, SQL 6/6 files green. The signed-out matrix on the hash preview is in the handoff numbers. Rendered look with real accounts still owed (Issue 52).
 
 After the first preview deploy (35a20d82): sign-in is now the app's first screen, and on a phone in landscape (844x390) its Google button sat below the first screen. Fixed at the narrowest level: under `(orientation: landscape) and (max-height: 499px)` the solo sign-in hides the logo (already seen in the launch) and tightens the bar; the button now ends at about 305px of 390 in Arabic and English, and at 506-531px of 568 at 320x568. Re-deployed and the 9-size matrix re-run on the new hash (handoff numbers).
+
+# Polish re-run before the 2/3 handoff: Ali's change list 3 (ADC-LOG-781)
+
+Worked through `reference/polish.md` by hand, every step, on the harness (mock data, signed in, no real account) at 320, 390, 844x390, 1280 and 1920, Arabic and English, night and day.
+
+## 1. Establish the system
+
+DESIGN tokens (night wool, madder for actions and the pill, saffron for open seats and pings, camel for rims), the shared Sheet, MenuRow, notes, Field. Drift classified: the red for destructive actions was a missing token (added `--danger` / `--danger-soft` per theme, not madder, so a red Cancel never reads as the primary madder button); the row editor is a new shared pattern used 13 times, not a one-off; the menu sheet reuses MenuRow's look with a button variant (it closes the sheet before it navigates, so Back returns to the page).
+
+## 2. Gather the evidence
+
+Walked as a host (open night, approve and decline, add and clear seats, remove a table, edit name, area, usual night, who sees it, approvals, guest limit, messages, about, rules, address, directions, unlock minutes) and as a guest (Message host, first message, conversation, report a message, blocked, messages off, Score tab seated / approved / pending / none). Content lengths: 120-letter unbroken words in bubbles, thread rows, edit rows and the diwaniya name; 200% text.
+
+## 3. Triage
+
+1. Blocked: the menu sheet closed itself in development (StrictMode history pop). Fixed in `Sheet`.
+2. States: focus loss after an edit; Esc did nothing in the editor. Fixed.
+3. Layout drift: the menu button stretched; tables nested as cards. Fixed.
+4. Copy: the Arabic comma in English names; "١ جديدة" without agreement (now رسالة جديدة / رسالتان جديدتان / N رسائل جديدة); the Score switcher said "Other tables" over the current one (now "Table" / "الطاولة"). Fixed.
+5. Cleanup: the retired `Settings.tsx` and its route helpers removed; the old in-file `.btn--danger` (ink words, madder border) removed so only one definition remains.
+
+## 4. Polish the whole path
+
+- Flow: the menu closes before it navigates; Back from Inbox or Messages returns to the page it was opened on. Message host on the diwaniya page opens the existing conversation instead of a second one (the first message creates it, then the page is replaced, so Back goes to the diwaniya, not to an empty composer).
+- Layout and type: every part on the Diwaniya page shares one title style (icon + 1.125rem/700); edit rows keep the label column at 38% (min 7rem) and stack under 360 px; desktop puts Tonight and Tables full width and the rest in two columns.
+- Colour: destructive red reaches 5.16:1 on the raised night surface with its own tint and 4.86:1 on the raised day surface; it never stands alone (icon + word + outline).
+- Interaction: Ctrl/Cmd+Enter sends a message, Enter makes a new line; Send disabled until there are words; reporting quotes the words back before sending.
+- Motion: bubbles rise 6 px and fade in 220 ms, the editor 4 px in 200 ms, both off under reduced motion; transform and opacity only (the CSS contract test still passes).
+
+## 5. Verify and finish
+
+113/113 measures without page overflow (10 routes x 9 sizes Arabic/night, 10 x 2 day, 3 English), one h1 and no heading jumps everywhere, no unnamed controls, no targets under 24 px. Tests 144/144 (the new src/ali3.test.tsx covers all six items, including the danger-token contrast), build with the prod-bundle guard, Semgrep clean. Diff read through: no debug output, no orphaned styles, the harness stays git-excluded. Still owed before the 2/3 handoff: the rendered signed-in pass on the real test accounts (ADC-LOG-780).

@@ -254,7 +254,7 @@ function SetupSheet({ id, tableId, onStarted, onTaken }: { id: string; tableId?:
       onSubmit={(e) => {
         e.preventDefault();
         if (dups.length > 0) {
-          setNote(c.roster.twice(dups.map((d) => fmt(d)).join('، ')));
+          setNote(c.roster.twice(dups.map((d) => fmt(d)).join(c.common.sep)));
           return;
         }
         if (!seated.every((p) => p.name.trim())) {
@@ -339,7 +339,7 @@ function LiveSheet({ diwaniyaId, sheetId, notice, onNext }: { diwaniyaId: string
   const chosen = winner || lead;
   const live = rounds.filter((r) => !r.undone_at);
   const label = (team: number) => (sheet.rule_pack === 'trix' ? sheet.players.find((p) => p.team === team)?.name ?? c.score.player(team, fmt) : c.score.team(team, fmt));
-  const names = (team: number) => sheet.players.filter((p) => p.team === team).map((p) => p.name).join('، ');
+  const names = (team: number) => sheet.players.filter((p) => p.team === team).map((p) => p.name).join(c.common.sep);
   const signed = sheet.rule_pack === 'trix';
   const parse = (v: string | undefined) => {
     const x = Number((v ?? '').trim().replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace('−', '-'));

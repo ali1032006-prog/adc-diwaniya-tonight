@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Lightning,
   Trash,
@@ -183,7 +183,20 @@ function Part({ id, icon: I, title, children, live, wide }: { id: string; icon: 
 export function EditRow({ label, value, editable, editor }: { label: string; value: ReactNode; editable: boolean; editor: (close: () => void) => ReactNode }) {
   const { c } = usePrefs();
   const [open, setOpen] = useState(false);
-  if (open && editable) return <div className="edit-row edit-row--open">{editor(() => setOpen(false))}</div>;
+  // Keyboard users land back on the row they edited (Save, Cancel or Esc), not on the page.
+  const row = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (!open && refocus.current) {
+      refocus.current = false;
+      row.current?.focus();
+    }
+  }, [open]);
+  const close = () => {
+    refocus.current = true;
+    setOpen(false);
+  };
+  if (open && editable) return <div className="edit-row edit-row--open">{editor(close)}</div>;
   if (!editable) {
     return (
       <div className="edit-row edit-row--static">
@@ -193,7 +206,7 @@ export function EditRow({ label, value, editable, editor }: { label: string; val
     );
   }
   return (
-    <button type="button" className="edit-row" aria-label={`${c.page.edit(label)}: ${typeof value === 'string' ? value : ''}`.replace(/: $/, '')} onClick={() => setOpen(true)}>
+    <button ref={row} type="button" className="edit-row" aria-label={`${c.page.edit(label)}: ${typeof value === 'string' ? value : ''}`.replace(/: $/, '')} onClick={() => setOpen(true)}>
       <span className="edit-row__label">{label}</span>
       <span className="edit-row__value">{value}</span>
       <PencilSimple size={18} aria-hidden="true" className="edit-row__pencil" />
@@ -209,6 +222,12 @@ function Editor({ label, onSave, close, children, saveDisabled }: { label: strin
     <form
       className="editor"
       aria-label={c.page.edit(label)}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          close();
+        }
+      }}
       onSubmit={(e) => {
         e.preventDefault();
         void act.run(async () => {

@@ -3495,8 +3495,8 @@ html,
 .appbar > .top-menu {
   margin-inline-start: auto;
   position: relative;
+  flex: none;
 }
-.appbar > .appbar__title + .top-menu,
 .appbar--push > .appbar__title--push {
   flex: 1 1 auto;
 }
@@ -3919,4 +3919,23 @@ html,
   display: grid;
   gap: 4px;
   margin: 0;
+}
+
+/* Inside a part of the one Diwaniya page a table is a row, not a card in a card (craft floor). */
+.dw-part .tables {
+  gap: 0;
+}
+.dw-part .table-block {
+  padding: 16px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1px solid var(--hairline);
+}
+.dw-part .tables > li:last-child .table-block,
+.dw-part .tables > .table-block:last-child {
+  border-bottom: 0;
+}
+.dw-part .requests .request:last-child {
+  border-bottom: 0;
 }

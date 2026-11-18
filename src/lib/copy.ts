@@ -24,6 +24,7 @@ const ar = {
     loading: 'جارٍ التحميل',
     remove: 'إزالة',
     you: 'أنت',
+    sep: '، ',
     minutes: (n: number, fmt: Fmt) => (n === 0 ? 'الآن' : `${fmt(n)} دقيقة`),
   },
   errors: {
@@ -600,7 +601,7 @@ const ar = {
     report: 'بلّغ عن الرسالة',
     reportTitle: 'بلاغ عن رسالة',
     reported: 'وصلنا بلاغك. شكراً لك.',
-    unread: (n: number, fmt: Fmt) => `${fmt(n)} جديدة`,
+    unread: (n: number, fmt: Fmt) => arCount(n, fmt, { one: 'رسالة جديدة', two: 'رسالتان جديدتان', few: 'رسائل جديدة', many: 'رسالة جديدة' }),
     sentAt: (t: string) => `أُرسلت ${t}`,
     seen: 'قُرئت',
     setting: 'الرسائل',
@@ -609,7 +610,7 @@ const ar = {
   scoreTab: {
     lead: (d: string, table: string) => `${d} · ${table}`,
     noTable: 'بلا طاولة (للدوري فقط)',
-    others: 'طاولات أخرى يمكنك تسجيل نقاطها',
+    others: 'الطاولة',
     why: { seated: 'طاولتك', here: 'أنت حاضر', host: 'ديوانيتك', regular: 'من روادها' },
     noneTitle: 'لا طاولة لتسجّل نقاطها الآن',
     noneBody: 'يسجّل النقاط من يجلس على طاولة الليلة، ومضيف الديوانية وروادها. اطلب مقعداً من «الليلة» ثم اجلس.',
@@ -661,6 +662,7 @@ const en: Copy = {
     loading: 'Loading',
     remove: 'Remove',
     you: 'You',
+    sep: ', ',
     minutes: (n, fmt) => (n === 0 ? 'now' : `${fmt(n)} min`),
   },
   errors: {
@@ -1240,7 +1242,7 @@ const en: Copy = {
   scoreTab: {
     lead: (d: string, table: string) => `${d} · ${table}`,
     noTable: 'No table (league only)',
-    others: 'Other tables you can score',
+    others: 'Table',
     why: { seated: 'Your table', here: "You're here", host: 'Your diwaniya', regular: 'Regular' },
     noneTitle: 'No table to score right now',
     noneBody: "People sitting at a table tonight score it, and so do the diwaniya's host and regulars. Ask for a seat on Tonight, then sit down.",

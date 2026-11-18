@@ -360,6 +360,18 @@ describe('(4) the Diwaniya tab shows everything on one page, tap any item to edi
     fireEvent.click(screen.getByRole('button', { name: en.common.save }));
     await waitFor(() => expect(api.updateDiwaniya).toHaveBeenCalledWith(DW, { messages_on: false }));
   });
+  it('Esc cancels an edit and focus returns to the row (keyboard path)', async () => {
+    hostPage();
+    withAll(<Board />);
+    const row = await screen.findByRole('button', { name: new RegExp(`^${en.page.edit(en.settings.usualSlot)}`) });
+    fireEvent.click(row);
+    const box = screen.getByLabelText(new RegExp(`^${en.settings.usualSlot}`));
+    expect(document.activeElement).toBe(box);
+    fireEvent.keyDown(box, { key: 'Escape' });
+    const back = await screen.findByRole('button', { name: new RegExp(`^${en.page.edit(en.settings.usualSlot)}`) });
+    await waitFor(() => expect(document.activeElement).toBe(back));
+    expect(api.updateDiwaniya).not.toHaveBeenCalled();
+  });
   it('a co-host sees the same facts without the pencil', async () => {
     hostPage();
     api.myDiwaniyas.mockResolvedValue([dw({ host_id: HOST })]);

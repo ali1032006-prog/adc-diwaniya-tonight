@@ -275,3 +275,94 @@ Also checked and fine: reduced motion (the splash keeps only its 200ms fade, sea
 3. **[P2] `/impeccable harden`**: OSM credit hit box.
 4. **[P3] `/impeccable shape`**: per-player Tarneeb 41 columns, only if Ali asks.
 5. **[P3] `/impeccable polish`**: redeploy send-ping with the next backend change, then the polish pass.
+
+# Re-run before the 2/3 handoff: Ali's change list 3 (ADC-LOG-781)
+
+Scope: every page and state the change list touched (top menu on every page, Inbox as a pushed page, Messages list / conversation / first message, the Score tab and its three "why not" states, the one-page Diwaniya tab with tap-to-edit, Place with Message host, the admin queue's reported words, the red remove/cancel buttons) plus the untouched pages for regressions. Run by hand from `reference/audit.md`, every section. Evidence: the local render harness (mock data, signed in as a mock "Ali", no real account, never deployed; Issue 52 hold), 113 measures (10 routes x 9 sizes in Arabic/night + 10 routes x 2 sizes in the day theme + 3 English/LTR), 120-letter unbroken words and 200% text at 320x568, screenshots looked at, and 144 jsdom tests. The rendered signed-in pass on real accounts is still owed (test accounts wait on Ali's direct word to Jinx, ADC-LOG-780).
+
+## Audit Health Score
+
+| # | Dimension | Score | Key Finding |
+|---|-----------|-------|-------------|
+| 1 | Accessibility | 3 | Row editor dropped focus to the page after Save/Cancel (fixed: back to the row, Esc cancels) |
+| 2 | Performance | 3 | Shared vendor chunk now carries the TopMenu name (333 kB, supabase-js + React); Messages lazy (9 kB) |
+| 3 | Theming | 4 | --danger and --danger-soft in both themes; contrast 5.16:1 night, 4.86:1 day at worst |
+| 4 | Responsive Design | 4 | 113/113 measures with no page overflow; desktop Diwaniya page uses two columns |
+| 5 | Implementation Integrity | 4 | One Sheet, one MenuRow pattern, one EditRow; no new pattern copied twice |
+| **Total** | | **18/20** | **Excellent (minor polish)** |
+
+## Implementation Integrity Verdict
+
+Pass. The new surfaces reuse the system instead of adding a second one: the top menu is the shared Sheet with menu rows; the Diwaniya page is one `Part` + `EditRow` + `Editor` pattern for all 13 facts (text, choice, number, area, location), each saving only its own field; every destructive control goes through one `.btn--danger` class (and the page's `RemoveButton` / `CancelButton`), words + icon + outline; conversations reuse the woven app bar, notes and the report sheet. One drift found and fixed: the Score sheet and League joined English names with the Arabic comma.
+
+## Executive Summary
+
+- Audit Health Score: **18/20** (Excellent)
+- Issues: P0 0, P1 1 (fixed), P2 3 (fixed), P3 2 (one fixed, one left with reason)
+- Top issues: the shared Sheet closed itself under React StrictMode (development only, but the history entry logic was fragile); the top-menu button stretched across the app bar (selector grew the button, not the title); focus loss after editing a row; the Arabic comma in English name lists; nested cards (tables inside the Tables part).
+- Next: the rendered signed-in pass on real accounts once Ali tells Jinx (ADC-LOG-780), then Jayce reviews Messages and score_targets in 2/3.
+
+## Detailed Findings by Severity
+
+**[P1] Sheet popped its own history entry and closed at once (fixed)**
+- Location: src/components/ui.tsx `Sheet`
+- Category: Implementation Integrity
+- Impact: in development (StrictMode mounts twice) the top menu never stayed open; the same effect would close any sheet that remounts.
+- Recommendation: count mounts; push the history entry only once; pop it after the last unmount. Done; menu opens, Messages navigates, Back returns to Tonight (checked in the harness).
+- Suggested command: /impeccable harden
+
+**[P2] Menu button stretched across the app bar (fixed)**
+- Location: src/styles.css `.appbar > .appbar__title + .top-menu`
+- Category: Responsive
+- Impact: the badge sat 130 px away from the three lines at 390 px.
+- Recommendation: the button stays `flex: none` at the inline end; only the pushed title flexes. Done (button 48 px, badge on its corner).
+- Suggested command: /impeccable layout
+
+**[P2] Focus fell to the page after Save, Cancel or Esc in a row editor (fixed)**
+- Location: src/screens/Board.tsx `EditRow` / `Editor`
+- Category: Accessibility (WCAG 2.4.3 Focus Order)
+- Impact: keyboard and switch users lose their place on a long page after every edit.
+- Recommendation: return focus to the row; Esc cancels. Done, with a jsdom test.
+- Suggested command: /impeccable harden
+
+**[P2] Arabic comma in English name lists (fixed)**
+- Location: src/screens/Score.tsx `names`, League history, the duplicate-seat note
+- Category: Implementation Integrity (copy)
+- Impact: "Tariq، Abu Fahad" in English.
+- Recommendation: `c.common.sep` per language. Done; the old test that expected the Arabic comma in English was corrected.
+- Suggested command: /impeccable clarify
+
+**[P3] Tables were cards inside the Tables card (fixed)**
+- Location: src/styles.css `.dw-part .table-block`
+- Category: Implementation Integrity (craft floor: nested cards)
+- Recommendation: inside a part a table is a row separated by a hairline. Done.
+- Suggested command: /impeccable layout
+
+**[P3] Bottom-nav labels truncate at 200% text (left as is)**
+- Location: src/styles.css `.nav__label`
+- Category: Responsive
+- Impact: at 200% text the five labels ellipsize; icons and the active pill still carry the meaning and each link keeps its full accessible name. Same behaviour as rounds 1/3 and before, not new here.
+- Recommendation: leave; a sixth tab is not coming (Inbox left the bar).
+- Suggested command: /impeccable adapt
+
+Also checked and fine: reduced motion (bubbles and the editor appear without movement; the nav pill re-keys and fades); hover, focus, disabled, loading (skeletons), empty (Messages, the Score tab's three reasons) and error (retry) states; Send stays disabled until there are words; characters-left hint from 200 left; blocked and messages-off states hide the box and say why; my words sit on the inline end in both directions; the back arrow and the send arrow mirror in RTL; the Diwaniya page names every row's action ("Edit Rules"), every Remove names who goes ("Remove · Bu Fahad"); one h1 per page and no heading jumps on all 10 routes; no unnamed control and no target under 24 px on any route (map tiles excluded, they are images); the Tonight chip row scrolls inside its own box (the only "wide" hit, a false positive); the push for a message never shows the words on the lock screen.
+
+## Patterns & Systemic Issues
+
+- Destructive actions now have one look across the app (Board, Place, Inbox, Score, Me, Admin, the area chips): red words, red outline, an X or bin icon. New ones must use `.btn--danger` with an icon.
+- Facts the host owns live in one place (the Diwaniya page); the Place page only shows them. The old S9 routes land on the page.
+
+## Positive Findings
+
+- The one-page Diwaniya tab shows every fact on the page itself: nothing hides behind a menu, and editing is one tap where the fact is.
+- The Score tab picks up the table without a single tap for a seated guest, and the three "why not" states each point at the next step.
+- Messages keep safety visible where it matters: the money warning above every conversation, report on each received message, the 5-before-an-answer rule told before the first message.
+
+## Recommended Actions
+
+1. **[P1] `/impeccable harden`**: StrictMode-proof Sheet history (done).
+2. **[P2] `/impeccable layout`**: menu button at the inline end (done).
+3. **[P2] `/impeccable harden`**: focus back to the edited row, Esc cancels (done).
+4. **[P2] `/impeccable clarify`**: comma per language (done).
+5. **[P3] `/impeccable layout`**: no cards in cards on the Diwaniya page (done).
+6. **[P3] `/impeccable polish`**: the polish pass below.

@@ -213,6 +213,13 @@ export function Composer({ onSend, note }: { onSend: (body: string) => Promise<v
           placeholder={c.messages.placeholder}
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            // Enter makes a new line; Ctrl/Cmd+Enter sends, as in most chat apps.
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
         />
       </Field>
       {act.error != null && <ErrorNote text={err(act.error)} />}
