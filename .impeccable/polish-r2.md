@@ -138,3 +138,35 @@ Walked as a host (open night, approve and decline, add and clear seats, remove a
 ## 5. Verify and finish
 
 113/113 measures without page overflow (10 routes x 9 sizes Arabic/night, 10 x 2 day, 3 English), one h1 and no heading jumps everywhere, no unnamed controls, no targets under 24 px. Tests 144/144 (the new src/ali3.test.tsx covers all six items, including the danger-token contrast), build with the prod-bundle guard, Semgrep clean. Diff read through: no debug output, no orphaned styles, the harness stays git-excluded. Still owed before the 2/3 handoff: the rendered signed-in pass on the real test accounts (ADC-LOG-780).
+
+# Polish re-run before the 2/3 handoff: Ali's change list 4 (ADC-LOG-794)
+
+Worked through `reference/polish.md` by hand, every step, on the harness (mock data, signed in, no real account) at all 9 sizes in Arabic and at 390 and 1280 in English with the day theme.
+
+## 1. Establish the system
+
+Tokens and shared parts as before (Chips, Field, Part, EditRow, notes, `.btn--danger`). Drift classified: the Score page's dropdowns were a conceptual mismatch with the rest of the app's quick choices (chips) and are now `Chips`; the room of names is a one-off chip-shaped button (it is an action, not a choice, so not `Chips`); per-field Save on the Diwaniya page was a conceptual mismatch with Ali's one-Save model and became one draft; the body overflow was a local defect with an app-wide effect.
+
+## 2. Gather the evidence
+
+Walked as a host on the Diwaniya page (change who sees it, approvals, messages and the area from the dropdowns; edit name, usual night, guest limit, rules, address and directions, unlock minutes; Cancel one, Discard all, Save all; reload with changes waiting) and as a player on Score (switch table by chip, game by chip, tap names into seats, type a guest, type an account holder's name, clear a seat, start with a duplicate). Tonight: every governorate and area option, game chips, clear filters, a remembered place with nothing tonight. Me: device Arabic with the account saying English.
+
+## 3. Triage
+
+1. Data loss: a tap could replace a typed name. Fixed.
+2. States: no cue that changes were waiting while the Save was out of sight. Added a small bar above the nav ("1 change not saved · Go to Save"), shown only while the Save is off screen; it points at the one Save and saves nothing itself.
+3. Layout drift: cut-off dropdown text on phones, stretched dropdowns on desktop, room below the seats, tight Score tab spacing. Fixed.
+4. Motion: the unsaved bar rises 8 px and fades in 220 ms, off under reduced motion; the room buttons press to 0.96, off under reduced motion; transform and opacity only.
+5. Cleanup: `WALK_IN`, the old per-field `Editor`, `ChoiceRow`/`ChoiceEditor`, `AreaEditor`, the Settings part and its `GearSix` import, the Tonight scope chips and open-seats checkbox and `Me`'s account-to-device effect removed; old tests moved to the new interactions.
+
+## 4. Polish the whole path
+
+- Flow: Score page goes table, game, who plays (room first, then seats), start; Diwaniya page goes settings, the night, requests, tables, people, about and rules, location, Save; Tonight goes your night, Location + Game, the list.
+- Layout and type: dropdown rows share the typed rows' label column from 480 px up and stack below; the Save block spans both desktop columns.
+- Colour: changed fields carry a saffron edge (dropdowns) or a saffron dot (typed rows), the same colour as the Save block's edge while changes wait.
+- Interaction: chips disable when no seat can take a name; Save disabled until something changed and while saving; Discard only while something waits; errors (empty name, out-of-range number, address without a pin) show above Save and stop it.
+- Copy: "In the room", "Tap a name to seat him in the next empty seat, or type a name", "Seat <name>", "Clear seat N", "Location", "All of Kuwait", "All of <governorate> (n)", "<area> (n)", "N changes not saved", "Everything is saved", "Discard changes", "Go to Save", Arabic for each with agreement.
+
+## 5. Verify and finish
+
+60/60 harness measures without page overflow, one h1 and no heading jumps, no unnamed control, no target under 24 px. Tests 158/158 (src/ali4.test.tsx covers all four items; the language test was red on 333a91c first), build with the prod-bundle guard, Semgrep clean. Diff read through: no debug output, no orphaned styles; the harness's mock additions stay git-excluded. Email sign-up/sign-in not built (held for Ali's mail ruling).

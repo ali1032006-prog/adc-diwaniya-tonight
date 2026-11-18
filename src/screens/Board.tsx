@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Lightning,
   Trash,
@@ -20,6 +21,7 @@ import {
   Article,
   Check,
   FloppyDisk,
+  ArrowDown,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
@@ -486,6 +488,8 @@ export function settingsPatch(dw: Diwaniya, draft: Partial<DiwaniyaSettings>): P
 
 // ---------------------------------------------------------------- the page
 
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwaniya[]; onPick: (id: string) => void; onChanged: () => void }) {
   const { c, err, fmt, time, prefs } = usePrefs();
   const { userId } = useSession();
@@ -530,6 +534,17 @@ function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwan
     window.addEventListener('beforeunload', stop);
     return () => window.removeEventListener('beforeunload', stop);
   }, [dirty]);
+  // While changes wait and the Save at the foot is out of sight, a small bar above the nav says so
+  // and takes him there (the page keeps one Save; this only points at it).
+  const saveBar = useRef<HTMLDivElement>(null);
+  const [saveSeen, setSaveSeen] = useState(true);
+  useEffect(() => {
+    const el = saveBar.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setSaveSeen(e.isIntersecting), { threshold: 0.5 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [host]);
   const discard = () => {
     setDraft({});
     setPinDraft(null);
@@ -711,8 +726,18 @@ function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwan
       </Part>
 
       {/* ---------- One Save for the whole page ---------- */}
+      {host && dirty && !saveSeen && createPortal(
+        <button type="button" className="dw-unsaved" onClick={() => saveBar.current?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'end' })}>
+          <span>{c.page.unsaved(changes, fmt)}</span>
+          <span className="dw-unsaved__go">
+            {c.page.toSave}
+            <ArrowDown size={16} aria-hidden="true" />
+          </span>
+        </button>,
+        document.body,
+      )}
       {host && (
-        <div className={dirty ? 'dw-save dw-save--dirty' : 'dw-save'} aria-live="polite">
+        <div ref={saveBar} className={dirty ? 'dw-save dw-save--dirty' : 'dw-save'} aria-live="polite">
           {saving.error != null && <ErrorNote text={err(saving.error)} />}
           {check && <ErrorNote text={check} />}
           {savedNote && !dirty && <OkNote text={savedNote} />}

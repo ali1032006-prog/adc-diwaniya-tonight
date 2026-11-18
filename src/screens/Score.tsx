@@ -244,15 +244,19 @@ function SetupSheet({ id, tableId, onStarted, onTaken }: { id: string; tableId?:
   const teams = pack === 'trix' ? 4 : 2;
   const seated = players.slice(0, n);
   const setSeat = (s: number, p: Player) => setPlayers((ps) => ps.map((x, i) => (i === s - 1 ? p : x)));
-  // The seat a tapped name goes to: the one being typed in, else the first empty one.
+  // The seat a tapped name goes to (see seatPerson).
   const [active, setActive] = useState<number | null>(null);
   const linked = linkToRoster(seated, people);
   // A typed name that is someone already seated is the same person twice (ali = Ali).
   const dups = duplicateSeats(linked);
   const inRoom = people.filter((r) => !linked.some((p) => p.user_id === r.id));
+  const empty = seated.findIndex((p) => !p.name.trim()) + 1;
+  const canSeat = (active !== null && active <= n) || empty > 0;
   const seatPerson = (r: RosterPerson) => {
-    const empty = seated.findIndex((p) => !p.name.trim()) + 1;
-    const to = active && active <= n ? active : empty;
+    // The seat being typed in if it is still empty, else the next empty seat; with every seat full,
+    // the seat last typed in is swapped (a typed name is never overwritten while a seat is free).
+    const here = active !== null && active <= n ? active : 0;
+    const to = here && !seated[here - 1].name.trim() ? here : empty || here;
     if (!to) return;
     setSeat(to, { user_id: r.id, name: r.name });
     setActive(null);
@@ -293,6 +297,22 @@ function SetupSheet({ id, tableId, onStarted, onTaken }: { id: string; tableId?:
         <GuideLink pack={pack} />
       </div>
       <h2 className="section-title">{c.score.whoPlays}</h2>
+      {inRoom.length > 0 && (
+        <div className="room" role="group" aria-label={c.roster.room}>
+          <p className="room__title">{c.roster.room}</p>
+          <p className="muted small">{c.roster.roomHint}</p>
+          <ul className="room__list">
+            {inRoom.map((r) => (
+              <li key={r.id}>
+                <button type="button" className="chip chip--person" aria-label={c.roster.add(r.name)} onMouseDown={(e) => e.preventDefault()} disabled={!canSeat} onClick={() => seatPerson(r)}>
+                  <Plus size={14} aria-hidden="true" />
+                  <bdi>{r.name}</bdi>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className={`score__teams score__teams--${teams}`}>
         {Array.from({ length: teams }, (_, ti) => {
           const team = ti + 1;
@@ -315,22 +335,6 @@ function SetupSheet({ id, tableId, onStarted, onTaken }: { id: string; tableId?:
           );
         })}
       </div>
-      {inRoom.length > 0 && (
-        <div className="room" role="group" aria-label={c.roster.room}>
-          <p className="room__title">{c.roster.room}</p>
-          <p className="muted small">{c.roster.roomHint}</p>
-          <ul className="room__list">
-            {inRoom.map((r) => (
-              <li key={r.id}>
-                <button type="button" className="chip chip--person" aria-label={c.roster.add(r.name)} onMouseDown={(e) => e.preventDefault()} onClick={() => seatPerson(r)}>
-                  <Plus size={14} aria-hidden="true" />
-                  <bdi>{r.name}</bdi>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
       <p className="muted small">{c.score.live}</p>
       {act.error != null && <ErrorNote text={err(act.error)} />}
       {note && <ErrorNote text={note} />}

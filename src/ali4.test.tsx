@@ -177,6 +177,13 @@ describe('(1) Score: people come in by tapping a name or typing one, no dropdown
     expect(p3.value).toBe('Omar');
     fireEvent.click(screen.getByRole('button', { name: en.roster.clear('3') }));
     expect(p3.value).toBe('');
+    // a name typed in a seat is never overwritten by a tap while another seat is free
+    const p1 = screen.getByLabelText('Player 1') as HTMLInputElement;
+    fireEvent.focus(p1);
+    fireEvent.change(p1, { target: { value: 'Tariq' } });
+    fireEvent.click(screen.getByRole('button', { name: en.roster.add('Omar') }));
+    expect(p1.value).toBe('Tariq');
+    expect((screen.getByLabelText('Player 2') as HTMLInputElement).value).toBe('Omar');
   });
   it('keeps the duplicate check: the same person typed twice stops the start', async () => {
     api.openSheet.mockResolvedValue(null);

@@ -94,7 +94,7 @@ body {
   font-size: 1rem;
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
-  overflow-x: hidden;
+  overflow-x: clip; /* hidden made body a scroller under html{clip}, so no sticky element ever stuck */
 }
 
 ::selection {
@@ -3731,6 +3731,7 @@ html,
 .score-now {
   display: grid;
   gap: 8px;
+  margin-bottom: 20px;
 }
 .score-now__lead {
   display: flex;
@@ -4032,8 +4033,12 @@ html,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.chip--person:hover {
+.chip--person:hover:not(:disabled) {
   border-color: var(--saffron);
+}
+.chip--person:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 .chip--person:active {
   transform: scale(0.96);
@@ -4076,6 +4081,7 @@ html,
 }
 .dw-field .input {
   min-width: 0;
+  max-width: 26rem; /* a choice reads as a control, not a bar across a desktop row */
 }
 .dw-field--changed .input {
   border-color: var(--saffron);
@@ -4101,11 +4107,52 @@ html,
   transition: border-color 200ms var(--ease-standard), transform 200ms var(--ease-standard);
 }
 .dw-save--dirty {
-  position: sticky;
-  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px);
-  z-index: 2;
   border-color: var(--saffron);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+/* Points at the one Save while it is out of sight (portalled to body, above the nav). */
+.dw-unsaved {
+  position: fixed;
+  inset-inline: 16px;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 10px);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 560px;
+  min-height: 48px;
+  margin-inline: auto;
+  padding: 8px 16px;
+  border: 1px solid var(--saffron);
+  border-radius: var(--radius-chip);
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
+  cursor: pointer;
+  animation: unsaved-in 220ms var(--ease-enter) both;
+}
+.dw-unsaved__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--saffron-ink);
+}
+.dw-unsaved:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+@keyframes unsaved-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .dw-save__state {
   margin: 0;
@@ -4119,10 +4166,15 @@ html,
 .dw-save__acts .btn--primary {
   min-width: 9rem;
 }
-@media (max-width: 359px) {
+/* On a phone the dropdown takes the row's full width under its label, so long choices read whole. */
+@media (max-width: 479px) {
   .dw-field {
     grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding-block: 10px;
   }
+}
+@media (max-width: 359px) {
   .dw-save__acts > * {
     flex: 1 1 auto;
   }
@@ -4132,14 +4184,12 @@ html,
     grid-column: 1 / -1;
   }
 }
-@media (orientation: landscape) and (max-height: 499px) {
-  .dw-save--dirty {
-    position: static;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .dw-save {
     transition: none;
+  }
+  .dw-unsaved {
+    animation: none;
   }
 }
 

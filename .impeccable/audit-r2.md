@@ -366,3 +366,89 @@ Also checked and fine: reduced motion (bubbles and the editor appear without mov
 4. **[P2] `/impeccable clarify`**: comma per language (done).
 5. **[P3] `/impeccable layout`**: no cards in cards on the Diwaniya page (done).
 6. **[P3] `/impeccable polish`**: the polish pass below.
+
+# Re-run before the 2/3 handoff: Ali's change list 4 (ADC-LOG-794)
+
+Scope: every page and state the change list touched (Score setup with the room of names and chips, the Score tab's table switch, the Diwaniya page with settings inside Tonight, its dropdowns, the one Save and the unsaved bar, Location last, Tonight's Location and Game filters, Me and Preferences for the language fix) plus Tonight, League and Me for regressions. Run by hand from `reference/audit.md`, every section. Evidence: the local render harness (mock data, signed in as a mock "Ali"; git-excluded, never deployed) with 60 measures (6 routes x 9 sizes in Arabic, plus Tonight/Diwaniya/Score at 390 and 1280 in English + day theme), screenshots looked at (390 Arabic, 320 English, 1280 English), a live run of the language case (device Arabic, account English: stays Arabic, account moved to Arabic), and 158 jsdom tests.
+
+## Audit Health Score
+
+| # | Dimension | Score | Key Finding |
+|---|-----------|-------|-------------|
+| 1 | Accessibility | 3 | Room names are real buttons named "Seat <name>"; dropdowns keep visible labels; one Save is the page's last control |
+| 2 | Performance | 3 | No new dependency; one IntersectionObserver for the unsaved bar; bundle unchanged in size class |
+| 3 | Theming | 4 | New pieces use --saffron, --raised, --danger tokens only; unsaved bar reads in both themes |
+| 4 | Responsive Design | 4 | 60/60 measures without page overflow; dropdowns stack under their label below 480 px, capped at 26rem on desktop |
+| 5 | Implementation Integrity | 3 | body `overflow-x: hidden` had made body a scroller, so no sticky element in the app ever stuck (fixed to clip) |
+| **Total** | | **17/20** | **Good (one systemic CSS defect found and fixed)** |
+
+## Implementation Integrity Verdict
+
+Pass after one fix. The change list reuses the system: chips are the shared `Chips` (radio) for game and table, the room names are chip-shaped buttons with the same radius and hairline, the Diwaniya page keeps `Part` + `EditRow` for typed facts and adds one `SelectRow` / `AreaRow` for list facts, and every change waits in one draft saved by one `Save` (updateDiwaniya once, setPin once). Verified defect: `body { overflow-x: hidden }` under `html { overflow-x: clip }` turned the body into its own scroll box (computed overflow-y auto), so `position: sticky` (the composer, the section index, the save bar draft) never stuck. Fixed with `clip`.
+
+## Executive Summary
+
+- Audit Health Score: **17/20** (Good)
+- Issues: P0 0, P1 1 (fixed), P2 3 (fixed), P3 2 (fixed)
+- Top issues: a tapped name could overwrite a typed one; sticky broken app-wide by body overflow; long dropdown choices cut off on phones; desktop dropdowns stretched across the row; the room of names sat under six seats.
+- Next: Jayce and Vi test the change list in 2/3 when Ambessa opens it.
+
+## Detailed Findings by Severity
+
+**[P1] A tap on a name could overwrite a name typed in a seat (fixed)**
+- Location: src/screens/Score.tsx `seatPerson`
+- Category: Implementation Integrity (data loss)
+- Impact: typing "Tariq" in seat 1, then tapping Omar, replaced Tariq.
+- Recommendation: the tapped name goes to the seat being typed in only while it is empty, else to the next empty seat; with every seat full it swaps the last seat typed in; chips disable when there is nowhere to go. Done, with a jsdom test.
+- Suggested command: /impeccable harden
+
+**[P2] No sticky element stuck anywhere (fixed)**
+- Location: src/styles.css `body`
+- Category: Implementation Integrity / Responsive
+- Impact: the Messages composer and the section index scrolled away; the new unsaved-changes cue would have too.
+- Recommendation: `overflow-x: clip` on body (html already clips). Done; body overflow-y now visible. Harness note: this Chrome hands back stale frames for some layers until the viewport is nudged, so sticky/fixed checks need a forced frame before trusting a screenshot.
+- Suggested command: /impeccable adapt
+
+**[P2] Long choices cut off in the Diwaniya dropdowns on phones (fixed)**
+- Location: src/styles.css `.dw-field`
+- Category: Responsive
+- Impact: "يمكن للناس مراسلتك" showed as "يمكن للناس مراسا" at 390 px.
+- Recommendation: below 480 px the label sits above a full-width dropdown. Done.
+- Suggested command: /impeccable layout
+
+**[P2] The room of names sat below all six seats (fixed)**
+- Location: src/screens/Score.tsx `SetupSheet`
+- Category: Implementation Integrity (flow)
+- Impact: on a phone the names you tap were a scroll away from the seats they fill.
+- Recommendation: the room sits right under "Who plays", above the teams. Done.
+- Suggested command: /impeccable layout
+
+**[P3] Desktop dropdowns stretched across the whole row (fixed)**
+- Location: src/styles.css `.dw-field .input`
+- Recommendation: max-width 26rem. Done.
+- Suggested command: /impeccable layout
+
+**[P3] The table chips touched the game label on the Score tab (fixed)**
+- Location: src/styles.css `.score-now`
+- Recommendation: 20 px below the table switch. Done.
+- Suggested command: /impeccable layout
+
+Also checked and fine: no `select` anywhere on the Score page and no "someone else" text; seated people prefilled; typed names that match one person in the room link to his account and count for the duplicate check ("ali" next to seated Ali is caught); each seat's clear button is 44 px and named "Clear seat N"; the Diwaniya page has exactly one Save, disabled with nothing to save, Discard in red with an X, unsaved count with Arabic agreement, Done / red Cancel / Esc on typed rows, focus back to the row; a co-host sees text, no dropdowns, no Save; leaving with unsaved changes asks; Tonight's Location dropdown lists only places with a night tonight, with counts, remembers the choice, and a saved place with nothing tonight stays pickable; one h1 and no heading jumps on all 6 routes at all sizes; no unnamed control; no target under 24 px; the language fix holds with the account saying English.
+
+## Patterns & Systemic Issues
+
+- Save behaviour on the Diwaniya page is now one model: change anything, it waits, one Save. Text facts still open in place because a typed value needs a box; list facts are the box.
+- Overflow on html/body must be `clip`, never `hidden`: hidden silently disables every sticky element.
+
+## Positive Findings
+
+- Adding players needs no menus: the people at the table are already in, the rest are a tap away, and a typed name still lands on the right account.
+- The language now follows the person's own choice on every page, and the account learns it once, wherever the switch was made.
+
+## Recommended Actions
+
+1. **[P1] `/impeccable harden`**: tapped names never overwrite typed ones (done).
+2. **[P2] `/impeccable adapt`**: body overflow clip so sticky works (done).
+3. **[P2] `/impeccable layout`**: dropdowns stack on phones; room above the teams (done).
+4. **[P3] `/impeccable layout`**: desktop dropdown width, Score tab spacing (done).
+5. **[P3] `/impeccable polish`**: the polish pass below.
