@@ -33,6 +33,9 @@ const api = vi.hoisted(() => ({
   getPin: vi.fn(),
   listRegulars: vi.fn(),
   listCohosts: vi.fn(),
+  openSheet: vi.fn(),
+  startScore: vi.fn(),
+  getSheet: vi.fn(),
 }));
 vi.mock('./lib/api', async (importActual) => {
   const real = await importActual<typeof import('./lib/api')>();
@@ -44,8 +47,9 @@ const { linkToRoster, duplicateSeats, Score } = await import('./screens/Score');
 const { filterNights, sitTarget, Tonight } = await import('./screens/Tonight');
 const { League } = await import('./screens/League');
 const { Inbox } = await import('./screens/Inbox');
-const { Me, ME_SECTIONS } = await import('./screens/Me');
-const { Settings, SETTINGS_SECTIONS } = await import('./screens/Settings');
+const { Me } = await import('./screens/Me');
+const { Settings } = await import('./screens/Settings');
+const { ME_SECTIONS, SETTINGS_SECTIONS } = await import('./lib/router');
 
 const ME = '11111111-1111-4111-8111-111111111111';
 const HOST = '33333333-3333-4333-8333-333333333333';
@@ -124,8 +128,8 @@ describe('(1) areas: Kuwait governorates and areas', () => {
     api.listBlocked.mockResolvedValue([]);
     api.amIAdmin.mockResolvedValue(false);
     api.myCohostInvites.mockResolvedValue([]);
-    const { container } = withAll(<Me />);
-    const area = container.querySelector('#me-account select[required]') as HTMLSelectElement;
+    const { container } = withAll(<Me section="account" />);
+    const area = container.querySelector('select[required]') as HTMLSelectElement;
     expect(area.tagName).toBe('SELECT');
     expect(area.value).toBe('السالمية');
     expect(area.querySelectorAll('optgroup')).toHaveLength(6);
@@ -158,7 +162,9 @@ describe('(3) a scored game reaches the league', () => {
   it('the score sheet seats me by account and sends user ids, not typed names', async () => {
     api.getOpenNight.mockResolvedValue(null);
     api.scoreRoster.mockResolvedValue(roster);
-    api.recordGame.mockResolvedValue('g1');
+    api.openSheet.mockResolvedValue(null);
+    api.startScore.mockResolvedValue('s1');
+    api.getSheet.mockResolvedValue({ sheet: null, rounds: [] });
     withAll(<Score id={DW} />);
     const seat1 = (await screen.findByLabelText('Player 1')) as HTMLSelectElement;
     await waitFor(() => expect(seat1.value).toBe(ME));
@@ -167,10 +173,11 @@ describe('(3) a scored game reaches the league', () => {
       fireEvent.change(screen.getByLabelText(`Player ${n}`), { target: { value: '__walk_in__' } });
       fireEvent.change(screen.getByLabelText(en.roster.walkInName(String(n))), { target: { value: `Guest ${n}` } });
     }
-    fireEvent.click(screen.getAllByRole('button', { name: en.score.winner })[0]);
-    fireEvent.click(screen.getByRole('button', { name: en.score.save }));
-    await waitFor(() => expect(api.recordGame).toHaveBeenCalled());
-    const results = api.recordGame.mock.calls[0][3] as { user_id: string | null; name: string }[];
+    // Live scoring (ADC-LOG-764 item 3): the seats go to the score sheet when the game starts.
+    fireEvent.click(screen.getByRole('button', { name: en.score.start }));
+    await waitFor(() => expect(api.startScore).toHaveBeenCalled());
+    const results = api.startScore.mock.calls[0][3] as { user_id: string | null; name: string; team: number }[];
+    expect(results.map((r) => r.team)).toEqual([1, 2, 1, 2, 1, 2]);
     expect(results[0].user_id).toBe(ME);
     expect(results[1].user_id).toBe(HOST);
     expect(results[2]).toMatchObject({ user_id: null, name: 'Guest 3' });
@@ -195,10 +202,11 @@ describe('(3) a scored game reaches the league', () => {
 describe('(4) guests checked in score their table', () => {
   it('says who may score when the server refuses the roster', async () => {
     api.getOpenNight.mockResolvedValue(null);
+    api.openSheet.mockResolvedValue(null);
     api.scoreRoster.mockRejectedValue(new ApiError('42501', 'only its managers, regulars and guests checked in tonight can score here'));
     withAll(<Score id={DW} />);
     expect(await screen.findByText(en.roster.notAllowed)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: en.score.save })).toBeNull();
+    expect(screen.queryByRole('button', { name: en.score.start })).toBeNull();
   });
 });
 
@@ -228,10 +236,10 @@ describe('(5) the map', () => {
   });
   it('S9 has no latitude or longitude boxes: a map, my-location and the directions', async () => {
     api.getDiwaniya.mockResolvedValue({ id: DW, name: 'D', area: 'السالمية', usual_slot: '', host_id: ME, visibility: 'public', about: '', rules: '', approval: 'host', guest_cap: 4, pin_unlock_minutes: 60 });
-    api.getPin.mockResolvedValue({ lat: 29.3375, lng: 47.98, directions: 'Gate 2' });
+    api.getPin.mockResolvedValue({ lat: 29.3375, lng: 47.98, directions: 'Gate 2', address: '' });
     api.listRegulars.mockResolvedValue([]);
     api.listCohosts.mockResolvedValue([]);
-    const { container } = withAll(<Settings id={DW} />);
+    const { container } = withAll(<Settings id={DW} section="location" />);
     expect(await screen.findByRole('button', { name: en.map.useMine })).toBeTruthy();
     expect(screen.queryByLabelText(/latitude|longitude/i)).toBeNull();
     const imgs = [...container.querySelectorAll('img.map__tile')];
@@ -258,28 +266,38 @@ describe('(6) My diwaniyas', () => {
   });
 });
 
-describe('(2) Me and S9 in clear sections', () => {
-  it('Me starts with preferences, then account, pings, privacy, data, and deleting last', async () => {
-    api.listBlocked.mockResolvedValue([]);
+describe('(2) Me and S9: a menu of buttons, one page per section (ADC-LOG-764 item 7)', () => {
+  it('Me is a menu: preferences, account, pings, privacy, data, then deleting apart; no jump row', async () => {
     api.amIAdmin.mockResolvedValue(false);
     api.myCohostInvites.mockResolvedValue([]);
-    const { container } = withAll(<Me />);
-    const ids = [...container.querySelectorAll('[id^="me-"]')].map((e) => e.id).filter((id) => (ME_SECTIONS as readonly string[]).includes(id));
-    expect(ids).toEqual([...ME_SECTIONS]);
-    expect(screen.getByRole('navigation', { name: en.sections.jump })).toBeTruthy();
-    // language, numerals and theme are in the first section
-    const first = container.querySelector('#me-prefs')!;
-    expect(within(first as HTMLElement).getByText('English')).toBeTruthy();
-    expect(within(first as HTMLElement).getByRole('button', { name: new RegExp(en.sections.pings) })).toBeTruthy();
+    withAll(<Me />);
+    const links = screen.getAllByRole('link').map((l) => l.getAttribute('href'));
+    expect(links).toEqual(ME_SECTIONS.map((x) => `#/me/${x}`));
+    expect(screen.queryByRole('navigation', { name: en.sections.jump })).toBeNull();
+    expect(screen.getByRole('button', { name: en.me.signOut })).toBeTruthy();
+    // nothing of a section shows on the menu itself
+    expect(screen.queryByText('English')).toBeNull();
   });
-  it('S9 shows its five sections in order with a jump row', async () => {
+  it('a Me section opens on its own page with back to the menu', async () => {
+    const { container } = withAll(<Me section="prefs" />);
+    expect(screen.getByText('English')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(STRINGS.en.me.preferences);
+    expect(screen.getByRole('button', { name: en.common.back })).toBeTruthy();
+    expect(container.querySelectorAll('form')).toHaveLength(0);
+  });
+  it('S9 is a menu of its five sections in order, each its own page', async () => {
     api.getDiwaniya.mockResolvedValue({ id: DW, name: 'D', area: 'السالمية', usual_slot: '', host_id: ME, visibility: 'public', about: '', rules: '', approval: 'host', guest_cap: 4, pin_unlock_minutes: 60 });
     api.getPin.mockResolvedValue(null);
     api.listRegulars.mockResolvedValue([]);
     api.listCohosts.mockResolvedValue([]);
-    const { container } = withAll(<Settings id={DW} />);
-    await screen.findByRole('navigation', { name: en.sections.jump });
-    expect([...container.querySelectorAll('.settings__section')].map((e) => e.id)).toEqual(SETTINGS_SECTIONS.map((s) => `s9-${s}`));
+    withAll(<Settings id={DW} />);
+    await screen.findByText('D');
+    expect(screen.getAllByRole('link').map((l) => l.getAttribute('href'))).toEqual(SETTINGS_SECTIONS.map((x) => `#/settings/${DW}/${x}`));
+    cleanup();
+    const { container } = withAll(<Settings id={DW} section="joining" />);
+    await screen.findByText(en.settings.visibility);
+    expect(container.querySelectorAll('.settings__section')).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(en.settings.joining);
   });
 });
 

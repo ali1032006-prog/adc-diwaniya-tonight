@@ -22,7 +22,6 @@ import {
   createDiwaniya,
   decideRequest,
   getOpenNight,
-  listFollowed,
   listRequests,
   markRequest,
   myDiwaniyas,
@@ -85,7 +84,6 @@ function BoardBody() {
           mine.reload();
         }} />
       )}
-      <Followed />
     </>
   );
 }
@@ -162,10 +160,6 @@ function HostBoard({ dw, all, onPick }: { dw: Diwaniya; all: Diwaniya[]; onPick:
           <a className="btn btn--quiet btn--small" href={href.settings(dw.id)}>
             <Gear size={18} aria-hidden="true" />
             {c.board.settings}
-          </a>
-          <a className="btn btn--quiet btn--small" href={href.score(dw.id)}>
-            <ChartBar size={18} aria-hidden="true" />
-            {c.board.score}
           </a>
         </div>
       </section>
@@ -407,6 +401,7 @@ function BoardTable({
         </Field>
         <div className="row">
           <a className="btn btn--quiet btn--small" href={href.score(dw.id, table.id)}>
+            <ChartBar size={18} aria-hidden="true" />
             {c.board.score}
           </a>
           <button type="button" className="btn btn--text btn--small" disabled={busy} onClick={() => run(() => removeTable(table.id))}>
@@ -546,32 +541,6 @@ function Requests({ dw, night }: { dw: Diwaniya; night: NightRow }) {
                 </button>
               )}
             </div>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function Followed() {
-  const { c, err, prefs } = usePrefs();
-  const list = useAsync(listFollowed, []);
-  return (
-    <section className="panel" aria-labelledby="followed-t">
-      <h2 id="followed-t" className="panel__title">
-        {c.board.followed}
-      </h2>
-      {list.error != null && <ErrorNote text={err(list.error)} onRetry={list.reload} />}
-      {list.data && list.data.length === 0 && <p className="muted">{c.board.noFollowed}</p>}
-      <ul className="link-list">
-        {(list.data ?? []).map((d) => (
-          <li key={d.id}>
-            <a className="link-row" href={href.place(d.id)}>
-              <bdi>{d.name}</bdi>
-              <span className="muted small">
-                <bdi>{areaLabel(d.area, prefs.lang)}</bdi>
-              </span>
-            </a>
           </li>
         ))}
       </ul>

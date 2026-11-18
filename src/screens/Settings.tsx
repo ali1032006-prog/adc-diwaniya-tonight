@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Star, UserGear, House, Article, DoorOpen, MapPin, UsersThree } from '@phosphor-icons/react';
+import type { Icon } from '@phosphor-icons/react';
 import { PushBar, ErrorNote, Field, OkNote, Skeleton } from '../components/ui';
 import { NeedsAccount } from '../components/account';
 import { AreaSelect } from '../components/AreaSelect';
 import { MapPicker, type LatLng } from '../components/Map';
-import { SectionIndex } from '../components/SectionIndex';
+import { MenuRow } from '../components/MenuRow';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { useAction, useAsync } from '../lib/useAsync';
@@ -19,28 +20,55 @@ import {
   updateDiwaniya,
   type DiwaniyaSettings,
 } from '../lib/api';
-import { href, hrefFor } from '../lib/router';
+import { SETTINGS_SECTIONS, href, hrefFor, type SettingsSection } from '../lib/router';
 
-/** The S9 sections, in page order (Ali, ADC-LOG-754 item 2: 'looks like a mess'). */
-export const SETTINGS_SECTIONS = ['basics', 'page', 'joining', 'location', 'people'] as const;
-export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+const ICONS: Record<SettingsSection, Icon> = { basics: House, page: Article, joining: DoorOpen, location: MapPin, people: UsersThree };
 
-/** S9 Diwaniya settings: five labelled sections, each with its own save, and a jump row at the top. */
-export function Settings({ id }: { id: string }) {
+/**
+ * S9 Diwaniya settings (Ali, ADC-LOG-764 item 7): a menu of five buttons; each opens its own section
+ * page with its own save, and back returns to the menu.
+ */
+export function Settings({ id, section }: { id: string; section?: SettingsSection }) {
   const { c } = usePrefs();
   return (
     <>
-      <PushBar title={c.settings.title} parent={hrefFor('diwaniya')} />
+      <PushBar title={section ? sectionTitle(section, c) : c.settings.title} parent={section ? href.settings(id) : hrefFor('diwaniya')} />
       <div className="screen__body">
-        <NeedsAccount>
-          <SettingsBody id={id} />
-        </NeedsAccount>
+        <NeedsAccount>{section ? <SettingsBody id={id} section={section} /> : <SettingsMenu id={id} />}</NeedsAccount>
       </div>
     </>
   );
 }
 
-function SettingsBody({ id }: { id: string }) {
+type C = ReturnType<typeof usePrefs>['c'];
+function sectionTitle(s: SettingsSection, c: C): string {
+  return { basics: c.sections.basics, page: c.sections.page, joining: c.settings.joining, location: c.settings.location, people: c.sections.people }[s];
+}
+function sectionSub(s: SettingsSection, c: C): string {
+  return { basics: c.menu.basicsSub, page: c.menu.pageSub, joining: c.menu.joiningSub, location: c.menu.locationSub, people: c.menu.peopleSub }[s];
+}
+
+function SettingsMenu({ id }: { id: string }) {
+  const { c, err } = usePrefs();
+  const dw = useAsync(() => getDiwaniya(id), [id]);
+  if (dw.loading && !dw.data) return <Skeleton rows={2} />;
+  if (dw.error != null && !dw.data) return <ErrorNote text={err(dw.error)} onRetry={dw.reload} />;
+  if (!dw.data) return <ErrorNote text={c.errors.notFound} />;
+  return (
+    <nav aria-label={c.settings.title}>
+      <h2 className="place__name settings__name">
+        <bdi>{dw.data.name}</bdi>
+      </h2>
+      <ul className="menu">
+        {SETTINGS_SECTIONS.map((x) => (
+          <MenuRow key={x} href={href.settings(id, x)} icon={ICONS[x]} title={sectionTitle(x, c)} sub={sectionSub(x, c)} />
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+function SettingsBody({ id, section }: { id: string; section: SettingsSection }) {
   const { c, err } = usePrefs();
   const { userId } = useSession();
   const data = useAsync(async () => {
@@ -51,6 +79,7 @@ function SettingsBody({ id }: { id: string }) {
   const [form, setForm] = useState<DiwaniyaSettings | null>(null);
   const [pin, setPinAt] = useState<LatLng | null>(null);
   const [directions, setDirections] = useState('');
+  const [address, setAddress] = useState('');
   const [saved, setSaved] = useState<{ where: SettingsSection; text: string } | null>(null);
 
   useEffect(() => {
@@ -72,6 +101,7 @@ function SettingsBody({ id }: { id: string }) {
     if (p) {
       setPinAt({ lat: Number(p.lat), lng: Number(p.lng) });
       setDirections(p.directions);
+      setAddress(p.address ?? '');
     }
   }, [data.data]);
 
@@ -93,30 +123,18 @@ function SettingsBody({ id }: { id: string }) {
 
   return (
     <div className="settings">
-      <SectionIndex
-        label={S.jump}
-        items={[
-          { id: 's9-basics', label: S.basics },
-          { id: 's9-page', label: S.page },
-          { id: 's9-joining', label: c.settings.joining },
-          { id: 's9-location', label: c.settings.location },
-          { id: 's9-people', label: S.people },
-        ]}
-      />
       {act.error != null && <ErrorNote text={err(act.error)} />}
 
+      {section === 'basics' && (
       <form
         className="panel settings__section"
         id="s9-basics"
-        aria-labelledby="s9-basics-t"
+        aria-label={S.basics}
         onSubmit={(e) => {
           e.preventDefault();
           save('basics', () => updateDiwaniya(id, { name: form.name.trim(), area: form.area, usual_slot: form.usual_slot }));
         }}
       >
-        <h2 id="s9-basics-t" className="panel__title">
-          <House size={20} aria-hidden="true" /> {S.basics}
-        </h2>
         <fieldset className="settings__fields" disabled={!host}>
           <Field label={c.board.name}>
             <input className="input" required maxLength={60} value={form.name} onChange={(e) => set('name', e.target.value)} />
@@ -135,19 +153,18 @@ function SettingsBody({ id }: { id: string }) {
           </button>
         )}
       </form>
+      )}
 
+      {section === 'page' && (
       <form
         className="panel settings__section"
         id="s9-page"
-        aria-labelledby="s9-page-t"
+        aria-label={S.page}
         onSubmit={(e) => {
           e.preventDefault();
           save('page', () => updateDiwaniya(id, { about: form.about, rules: form.rules }));
         }}
       >
-        <h2 id="s9-page-t" className="panel__title">
-          <Article size={20} aria-hidden="true" /> {S.page}
-        </h2>
         <fieldset className="settings__fields" disabled={!host}>
           <Field label={c.settings.about}>
             <textarea className="input" rows={3} maxLength={500} value={form.about} onChange={(e) => set('about', e.target.value)} />
@@ -163,19 +180,18 @@ function SettingsBody({ id }: { id: string }) {
           </button>
         )}
       </form>
+      )}
 
+      {section === 'joining' && (
       <form
         className="panel settings__section"
         id="s9-joining"
-        aria-labelledby="s9-joining-t"
+        aria-label={c.settings.joining}
         onSubmit={(e) => {
           e.preventDefault();
           save('joining', () => updateDiwaniya(id, { visibility: form.visibility, approval: form.approval, guest_cap: form.guest_cap }));
         }}
       >
-        <h2 id="s9-joining-t" className="panel__title">
-          <DoorOpen size={20} aria-hidden="true" /> {c.settings.joining}
-        </h2>
         <fieldset className="settings__fields" disabled={!host}>
           <Field label={c.settings.visibility}>
             <select className="input" value={form.visibility} onChange={(e) => set('visibility', e.target.value as DiwaniyaSettings['visibility'])}>
@@ -206,11 +222,13 @@ function SettingsBody({ id }: { id: string }) {
           </button>
         )}
       </form>
+      )}
 
+      {section === 'location' && (
       <form
         className="panel settings__section"
         id="s9-location"
-        aria-labelledby="s9-location-t"
+        aria-label={c.settings.location}
         onSubmit={(e) => {
           e.preventDefault();
           if (!pin) {
@@ -218,18 +236,18 @@ function SettingsBody({ id }: { id: string }) {
             return;
           }
           save('location', async () => {
-            await setPin(id, pin.lat, pin.lng, directions.trim());
+            await setPin(id, pin.lat, pin.lng, directions.trim(), address.trim().replace(/[\u0000-\u001f\u007f]/g, ' '));
             await updateDiwaniya(id, { pin_unlock_minutes: form.pin_unlock_minutes });
           });
         }}
       >
-        <h2 id="s9-location-t" className="panel__title">
-          <MapPin size={20} aria-hidden="true" /> {c.settings.location}
-        </h2>
         <p className="muted small">{c.settings.locationBody}</p>
         {host ? (
           <>
             <MapPicker value={pin} onChange={setPinAt} />
+            <Field label={c.settings.address} hint={c.settings.addressHint}>
+              <textarea className="input" rows={2} maxLength={200} value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" />
+            </Field>
             <Field label={c.settings.directions}>
               <textarea className="input" rows={2} maxLength={300} value={directions} onChange={(e) => setDirections(e.target.value)} />
             </Field>
@@ -255,11 +273,10 @@ function SettingsBody({ id }: { id: string }) {
           <p className="muted">{c.map.hostOnly}</p>
         )}
       </form>
+      )}
 
-      <section className="panel settings__section" id="s9-people" aria-labelledby="s9-people-t">
-        <h2 id="s9-people-t" className="panel__title">
-          <UsersThree size={20} aria-hidden="true" /> {S.people}
-        </h2>
+      {section === 'people' && (
+      <section className="panel settings__section" id="s9-people" aria-label={S.people}>
         <h3 className="setting__label">
           <Star size={16} aria-hidden="true" /> {c.settings.regulars}
         </h3>
@@ -297,6 +314,7 @@ function SettingsBody({ id }: { id: string }) {
         </ul>
         {done('people')}
       </section>
+      )}
     </div>
   );
 }

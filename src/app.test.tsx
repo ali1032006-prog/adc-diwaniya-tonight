@@ -1,5 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { useState } from 'react';
+import { Welcome } from './screens/Welcome';
 import { afterEach } from 'vitest';
 import css from './styles.css?raw';
 import { App } from './App';
@@ -133,18 +135,38 @@ describe('App', () => {
     localStorage.clear();
     window.location.hash = '';
   });
-  it('sends a first visit to Welcome, then opens on Tonight', async () => {
+  it('plays the logo first, then goes straight to sign-in (ADC-LOG-764 item 5)', async () => {
+    sessionStorage.clear();
     render(<App />);
-    expect(window.location.hash).toBe('#/welcome');
+    expect(screen.getByRole('img', { name: 'ديوانيتنا' }).className).toContain('splash');
     expect(document.documentElement.dir).toBe('rtl');
     expect(document.documentElement.lang).toBe('ar');
+    await waitFor(() => expect(sessionStorage.getItem('dt.splashed.v1')).toBe('1'), { timeout: 3000 });
+    expect(window.location.hash).toMatch(/^#\/signin\?mode=signin/);
+    expect(screen.getByRole('button', { name: 'تسجيل الدخول باستخدام Google' })).toBeTruthy();
+    // the Welcome steps never come before sign-in
+    expect(localStorage.getItem('dt.welcomed.v1')).toBeNull();
   });
-  it('switches to English and LTR from the language button', async () => {
-    localStorage.setItem('dt.welcomed.v1', '1');
-    window.location.hash = '#/welcome';
+  it('plays the logo once per visit and keeps a deep link for after sign-in', async () => {
+    sessionStorage.setItem('dt.splashed.v1', '1');
+    window.location.hash = '#/d/22222222-2222-4222-8222-222222222222';
     render(<App />);
+    expect(screen.queryByRole('img', { name: 'ديوانيتنا' })).toBeNull();
+    await waitFor(() => expect(window.location.hash).toBe('#/signin?mode=signin&from=d%2F22222222-2222-4222-8222-222222222222'));
+  });
+  it('switches the Welcome steps to English and LTR from the language button', async () => {
+    function Live() {
+      const [prefs, set] = useState<Prefs>(DEFAULT_PREFS);
+      document.documentElement.dir = dirFor(prefs.lang);
+      return (
+        <PrefsContext.Provider value={{ prefs, setPrefs: (p) => set((o) => ({ ...o, ...p })) }}>
+          <Welcome onDone={() => {}} />
+        </PrefsContext.Provider>
+      );
+    }
+    render(<Live />);
     fireEvent.click(screen.getByRole('button', { name: 'English' }));
     expect(document.documentElement.dir).toBe('ltr');
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Diwaniya Tonight');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Diwaniyatna');
   });
 });

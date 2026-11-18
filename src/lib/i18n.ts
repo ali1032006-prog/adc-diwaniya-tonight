@@ -12,7 +12,7 @@ function arOpen(open: number, fmt: Fmt): string {
 }
 
 const ar = {
-  appName: 'ديوانية الليلة',
+  appName: 'ديوانيتنا',
   tabs: { tonight: 'الليلة', diwaniya: 'الديوانية', league: 'الدوري', inbox: 'الوارد', me: 'حسابي' },
   navLabel: 'التنقل الرئيسي',
   games: { kout: 'كوت', baloot: 'بلوت', tarneeb: 'طرنيب', trix: 'تركس' },
@@ -64,7 +64,7 @@ const ar = {
       { title: 'اطلب المقعد، والمضيف يوافق', body: 'العنوان الدقيق لا يظهر إلا لمن وافق عليه المضيف.' },
       { title: 'دوري الديوانية محفوظ للجميع', body: 'النتائج والنجوم والشهر، من أي جوال.' },
     ],
-    lookAround: 'تصفّح الليلة',
+    start: 'يلّا نبدأ',
     next: 'التالي',
     language: 'English',
   },
@@ -73,7 +73,7 @@ const ar = {
 type Strings = typeof ar;
 
 const en: Strings = {
-  appName: 'Diwaniya Tonight',
+  appName: 'Diwaniyatna',
   tabs: { tonight: 'Tonight', diwaniya: 'Diwaniya', league: 'League', inbox: 'Inbox', me: 'Me' },
   navLabel: 'Main navigation',
   games: { kout: 'Kout', baloot: 'Baloot', tarneeb: 'Tarneeb', trix: 'Trix' },
@@ -125,7 +125,7 @@ const en: Strings = {
       { title: 'Ask for the seat, the host approves', body: 'The exact address shows only to guests the host approved.' },
       { title: "The diwaniya's league, kept for everyone", body: 'Results, stars and the monthly crown, from any phone.' },
     ],
-    lookAround: 'Look around tonight',
+    start: "Let's start",
     next: 'Next',
     language: 'العربية',
   },

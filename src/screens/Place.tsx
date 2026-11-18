@@ -137,7 +137,8 @@ function PlaceBody({ id }: { id: string }) {
                 seatedHere={seatedAt?.id === tb.id}
                 seatedElsewhere={!!seatedAt && seatedAt.id !== tb.id}
                 member={!!approved || manager}
-                scoreHref={manager || seatedAt || active?.status === 'arrived' ? href.score(dw.id, tb.id) : null}
+                // Hosts score from their board (one place each, ADC-LOG-764 item 1); guests checked in score here.
+                scoreHref={!manager && (seatedAt || active?.status === 'arrived') ? href.score(dw.id, tb.id) : null}
                 busy={act.busy}
                 onSit={(n) => doAct(() => checkIn(tb.id, n))}
                 onLeave={() => doAct(() => leaveSeat(tb.id))}
@@ -332,6 +333,12 @@ function PinCard({ diwaniyaId, night }: { diwaniyaId: string; night: NightRow })
       <h2 id="pin-t" className="panel__title">
         <MapPin size={18} weight="fill" aria-hidden="true" /> {c.place.pinTitle}
       </h2>
+      {pin.data.address && (
+        <p className="pin-card__address">
+          <span className="muted small">{c.settings.address}</span>
+          <bdi>{pin.data.address}</bdi>
+        </p>
+      )}
       <MapView at={at} />
       {pin.data.directions && (
         <p className="prose">

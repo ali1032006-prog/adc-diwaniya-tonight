@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Crown, X, ArrowCounterClockwise } from '@phosphor-icons/react';
-import { ErrorNote, OkNote, Field } from '../components/ui';
+import { Crown, X, ArrowCounterClockwise, ArrowsClockwise, BookOpenText, Plus, Trophy } from '@phosphor-icons/react';
+import { ErrorNote, OkNote, Field, Skeleton } from '../components/ui';
 import { NeedsAccount } from '../components/account';
 import { WovenBand } from '../components/WovenBand';
 import { usePrefs } from '../lib/prefs';
@@ -8,17 +8,26 @@ import { useSession } from '../lib/session';
 import { useAction, useAsync } from '../lib/useAsync';
 import {
   ApiError,
+  addRound,
+  discardScore,
+  finishScore,
   getOpenNight,
-  recordGame,
+  getSheet,
+  openSheet,
   scoreRoster,
+  sheetTotals,
+  startScore,
   undoGame,
+  undoRound,
   RULE_PACKS,
   type ResultInput,
   type RosterPerson,
   type RulePack,
+  type SheetPlayer,
   type TableRow,
 } from '../lib/api';
-import { back, hrefFor } from '../lib/router';
+import { gameOfPack } from '../lib/guides';
+import { back, href, hrefFor } from '../lib/router';
 
 export interface Player {
   user_id: string | null;
@@ -109,7 +118,59 @@ export function Score({ id, table }: { id: string; table?: string }) {
   );
 }
 
+/** The seats of a sheet as record_game players: Trix seats are their own team. */
+export function sheetPlayers(pack: RulePack, players: Player[]): SheetPlayer[] {
+  return players.slice(0, playersFor(pack)).map((p, i) => ({ seat: i + 1, user_id: p.user_id, name: p.name.trim(), team: teamOf(pack, i + 1) }));
+}
+
+/** The team ahead on the running totals, or 0 on a tie. */
+export function leader(totals: number[]): number {
+  if (totals.length === 0) return 0;
+  const max = Math.max(...totals);
+  return totals.filter((x) => x === max).length === 1 ? totals.indexOf(max) + 1 : 0;
+}
+
+/**
+ * Live scoring (Ali, ADC-LOG-764 item 3): pick the players once, then score round by round. Every
+ * round is saved on the server as it is added, so a refresh or another phone at the same table
+ * picks the game up where it is; finish sends the running totals to the league.
+ */
 function ScoreBody({ id, tableId }: { id: string; tableId?: string }) {
+  const { userId } = useSession();
+  const open = useAsync(() => openSheet(id, tableId ?? null, userId), [id, tableId, userId], ['score_sheets']);
+  const [mine, setMine] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+  if (open.loading && !open.data && !mine) return <Skeleton rows={3} />;
+  const current = mine ?? open.data?.id ?? null;
+  if (current) {
+    return (
+      <LiveSheet
+        key={current}
+        diwaniyaId={id}
+        sheetId={current}
+        notice={note}
+        onNext={(next) => {
+          setNote('');
+          setMine(next);
+          open.reload();
+        }}
+      />
+    );
+  }
+  return (
+    <SetupSheet
+      id={id}
+      tableId={tableId}
+      onStarted={(sid) => setMine(sid)}
+      onTaken={() => {
+        setNote('taken');
+        open.reload();
+      }}
+    />
+  );
+}
+
+function SetupSheet({ id, tableId, onStarted, onTaken }: { id: string; tableId?: string; onStarted: (sheet: string) => void; onTaken: () => void }) {
   const { c, fmt, err } = usePrefs();
   const { userId } = useSession();
   const night = useAsync(() => getOpenNight(id), [id]);
@@ -117,9 +178,6 @@ function ScoreBody({ id, tableId }: { id: string; tableId?: string }) {
   const tb = night.data?.tables.find((x) => x.id === tableId);
   const [pack, setPack] = useState<RulePack>('kout_bo6');
   const [players, setPlayers] = useState<Player[]>(() => Array.from({ length: 6 }, () => ({ user_id: null, name: '' })));
-  const [points, setPoints] = useState<number[]>([0, 0, 0, 0, 0, 0]);
-  const [winner, setWinner] = useState(0);
-  const [last, setLast] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const act = useAction();
   const people = roster.data ?? [];
@@ -145,12 +203,9 @@ function ScoreBody({ id, tableId }: { id: string; tableId?: string }) {
   const teams = pack === 'trix' ? 4 : 2;
   const seated = players.slice(0, n);
   const dups = duplicateSeats(seated);
-  const ready = seated.every((p) => p.name.trim()) && winner > 0 && dups.length === 0;
   const setSeat = (s: number, p: Player) => setPlayers(players.map((x, i) => (i === s - 1 ? p : x)));
 
-  if (blocked) {
-    return <ErrorNote text={c.roster.notAllowed} />;
-  }
+  if (blocked) return <ErrorNote text={c.roster.notAllowed} />;
 
   return (
     <form
@@ -161,95 +216,322 @@ function ScoreBody({ id, tableId }: { id: string; tableId?: string }) {
           setNote(c.roster.twice(dups.map((d) => fmt(d)).join('، ')));
           return;
         }
-        if (!ready) {
+        if (!seated.every((p) => p.name.trim())) {
           setNote(c.score.needNames);
           return;
         }
+        setNote('');
         void act.run(async () => {
-          const linked = linkToRoster(players, people);
-          const gid = await recordGame(id, pack, tb?.id ?? tableId ?? null, buildResults(pack, linked, points, winner));
-          setLast(gid);
-          setNote(c.score.saved);
-          setPoints([0, 0, 0, 0, 0, 0]);
-          setWinner(0);
+          try {
+            onStarted(await startScore(id, pack, tb?.id ?? tableId ?? null, sheetPlayers(pack, linkToRoster(players, people))));
+          } catch (x) {
+            if (x instanceof ApiError && x.code === '23505') onTaken();
+            else throw x;
+          }
         });
       }}
     >
       {tb && <p className="muted small">{c.roster.forTable(tb.label || c.roster.thisTable)}</p>}
-      <Field label={c.score.pack}>
-        <select
-          className="input"
-          value={pack}
-          onChange={(e) => {
-            setPack(e.target.value as RulePack);
-            setWinner(0);
-          }}
-        >
-          {RULE_PACKS.map((p) => (
-            <option key={p} value={p}>
-              {c.score.packs[p]}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <div className="score__head">
+        <Field label={c.score.pack}>
+          <select className="input" value={pack} onChange={(e) => setPack(e.target.value as RulePack)}>
+            {RULE_PACKS.map((p) => (
+              <option key={p} value={p}>
+                {c.score.packs[p]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <GuideLink pack={pack} />
+      </div>
+      <h2 className="section-title">{c.score.whoPlays}</h2>
       <div className={`score__teams score__teams--${teams}`}>
         {Array.from({ length: teams }, (_, ti) => {
           const team = ti + 1;
           const seats = Array.from({ length: n }, (_, i) => i + 1).filter((s) => teamOf(pack, s) === team);
           return (
-            <fieldset key={team} className={winner === team ? 'team team--won' : 'team'}>
+            <fieldset key={team} className="team">
               <legend className="team__name">{pack === 'trix' ? c.score.player(team, fmt) : c.score.team(team, fmt)}</legend>
               {seats.map((s) => (
                 <SeatPick key={s} seat={s} value={players[s - 1]} roster={people} dup={dups.includes(s)} onChange={(p) => setSeat(s, p)} />
               ))}
-              <label className="team__points">
-                <span className="visually-hidden">
-                  {c.score.points} {team}
-                </span>
-                <input
-                  className="score__num"
-                  type="number"
-                  inputMode="numeric"
-                  min={-1000}
-                  max={1000}
-                  value={points[ti]}
-                  onChange={(e) => setPoints(points.map((p, i) => (i === ti ? Number(e.target.value) : p)))}
-                />
-              </label>
-              <button type="button" className="btn btn--quiet btn--small" aria-pressed={winner === team} onClick={() => setWinner(team)}>
-                <Crown size={18} weight={winner === team ? 'fill' : 'regular'} aria-hidden="true" />
-                {c.score.winner}
-              </button>
             </fieldset>
           );
         })}
       </div>
-      <p className="muted small">{c.roster.leagueNote}</p>
+      <p className="muted small">{c.score.live}</p>
       {act.error != null && <ErrorNote text={err(act.error)} />}
-      {note && (note === c.score.saved || note === c.score.undone ? <OkNote text={note} /> : <ErrorNote text={note} />)}
-      <div className="row">
-        <button className="btn btn--primary btn--wide" disabled={act.busy}>
-          {c.score.save}
-        </button>
-        {last && (
-          <button
-            type="button"
-            className="btn btn--quiet"
-            disabled={act.busy}
-            onClick={() =>
-              void act.run(async () => {
-                await undoGame(last);
-                setLast(null);
-                setNote(c.score.undone);
-              })
-            }
-          >
-            <ArrowCounterClockwise size={18} aria-hidden="true" />
-            {c.score.undo}
-          </button>
-        )}
-      </div>
+      {note && <ErrorNote text={note} />}
+      <button className="btn btn--primary btn--wide" disabled={act.busy}>
+        {c.score.start}
+      </button>
     </form>
+  );
+}
+
+function GuideLink({ pack }: { pack: RulePack }) {
+  const { c } = usePrefs();
+  return (
+    <a className="btn btn--text btn--small score__guide" href={href.guides(gameOfPack(pack), 'score')}>
+      <BookOpenText size={18} aria-hidden="true" />
+      {c.score.howToScore}
+    </a>
+  );
+}
+
+function LiveSheet({ diwaniyaId, sheetId, notice, onNext }: { diwaniyaId: string; sheetId: string; notice: string; onNext: (next: string | null) => void }) {
+  const { c, fmt, err } = usePrefs();
+  const data = useAsync(() => getSheet(sheetId), [sheetId], ['score_rounds', 'score_sheets']);
+  const act = useAction();
+  const [draft, setDraft] = useState<string[]>([]);
+  const [winner, setWinner] = useState(0);
+  const [result, setResult] = useState<{ game: string; undone: boolean } | null>(null);
+  const [note, setNote] = useState('');
+
+  if (data.loading && !data.data) return <Skeleton rows={3} />;
+  if (data.error != null && !data.data) return <ErrorNote text={err(data.error)} onRetry={data.reload} />;
+  const sheet = data.data?.sheet;
+  if (!sheet) return <ErrorNote text={c.errors.notFound} />;
+  const rounds = data.data!.rounds;
+  const totals = sheetTotals(sheet.teams, rounds);
+  const lead = leader(totals);
+  const chosen = winner || lead;
+  const live = rounds.filter((r) => !r.undone_at);
+  const label = (team: number) => (sheet.rule_pack === 'trix' ? sheet.players.find((p) => p.team === team)?.name ?? c.score.player(team, fmt) : c.score.team(team, fmt));
+  const names = (team: number) => sheet.players.filter((p) => p.team === team).map((p) => p.name).join('، ');
+  const signed = sheet.rule_pack === 'trix';
+  const parse = (v: string | undefined) => {
+    const x = Number((v ?? '').trim().replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace('−', '-'));
+    return Number.isFinite(x) ? Math.trunc(x) : NaN;
+  };
+  const again = () =>
+    void act.run(async () => {
+      onNext(await startScore(diwaniyaId, sheet.rule_pack, sheet.table_id, sheet.players));
+    });
+
+  if (result || sheet.status !== 'open') {
+    const gameId = result?.game ?? sheet.game_id;
+    return (
+      <section className="score score--done" aria-live="polite">
+        <Scoreboard totals={totals} lead={sheet.status === 'finished' ? 0 : lead} label={label} names={names} teams={sheet.teams} />
+        {result?.undone ? <OkNote text={c.score.undone} /> : sheet.status === 'discarded' ? <OkNote text={c.score.discarded} /> : <OkNote text={c.score.sent} />}
+        {act.error != null && <ErrorNote text={err(act.error)} />}
+        <div className="row">
+          <button type="button" className="btn btn--primary" disabled={act.busy} onClick={again}>
+            <ArrowsClockwise size={18} aria-hidden="true" />
+            {c.score.again}
+          </button>
+          {gameId && !result?.undone && (result || sheet.status === 'finished') && (
+            <button
+              type="button"
+              className="btn btn--quiet"
+              disabled={act.busy}
+              onClick={() =>
+                void act.run(async () => {
+                  await undoGame(gameId);
+                  setResult({ game: gameId, undone: true });
+                })
+              }
+            >
+              <ArrowCounterClockwise size={18} aria-hidden="true" />
+              {c.score.undo}
+            </button>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <div className="score score--live">
+      {notice === 'taken' && <OkNote text={c.score.taken} />}
+      <div className="score__head">
+        <p className="score__pack">{c.score.packs[sheet.rule_pack]}</p>
+        <GuideLink pack={sheet.rule_pack} />
+      </div>
+      <Scoreboard totals={totals} lead={lead} label={label} names={names} teams={sheet.teams} />
+      <p className="muted small">{c.score.live}</p>
+
+      <form
+        className="panel round-form"
+        aria-labelledby="round-t"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const pts = Array.from({ length: sheet.teams }, (_, i) => parse(draft[i] || '0'));
+          if (pts.some((x) => Number.isNaN(x) || x < -1000 || x > 1000)) {
+            setNote(c.errors.invalid);
+            return;
+          }
+          setNote('');
+          void act.run(async () => {
+            await addRound(sheetId, pts);
+            setDraft([]);
+            data.reload();
+          });
+        }}
+      >
+        <h2 id="round-t" className="panel__title">
+          {c.score.round(live.length + 1, fmt)} · <span className="muted">{c.score.thisRound}</span>
+        </h2>
+        <div className={`round-form__grid round-form__grid--${sheet.teams}`}>
+          {Array.from({ length: sheet.teams }, (_, i) => (
+            <label key={i} className="round-form__cell">
+              <span className="round-form__who">{label(i + 1)}</span>
+              <input
+                className="score__num"
+                inputMode={signed ? 'text' : 'numeric'}
+                pattern={signed ? '[-−]?[0-9٠-٩]*' : '[0-9٠-٩]*'}
+                autoComplete="off"
+                placeholder={fmt(0)}
+                value={draft[i] ?? ''}
+                onChange={(e) => setDraft(Array.from({ length: sheet.teams }, (_, j) => (j === i ? e.target.value : draft[j] ?? '')))}
+              />
+            </label>
+          ))}
+        </div>
+        {note && <ErrorNote text={note} />}
+        {act.error != null && <ErrorNote text={err(act.error)} />}
+        <button className="btn btn--primary btn--wide" disabled={act.busy}>
+          <Plus size={18} aria-hidden="true" />
+          {c.score.addRound}
+        </button>
+      </form>
+
+      <section className="panel" aria-labelledby="rounds-t">
+        <h2 id="rounds-t" className="panel__title">
+          {c.score.rounds}
+        </h2>
+        {rounds.length === 0 ? (
+          <p className="muted">{c.score.noRounds}</p>
+        ) : (
+          <table className="rounds">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                {Array.from({ length: sheet.teams }, (_, i) => (
+                  <th key={i} scope="col">
+                    <bdi>{label(i + 1)}</bdi>
+                  </th>
+                ))}
+                <th scope="col">
+                  <span className="visually-hidden">{c.score.undo}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...rounds].reverse().map((r) => (
+                <tr key={r.round_no} className={r.undone_at ? 'rounds__row rounds__row--undone' : 'rounds__row'}>
+                  <td className="num">{fmt(r.round_no)}</td>
+                  {r.points.map((x, i) => (
+                    <td key={i} className="num">
+                      {fmt(x)}
+                    </td>
+                  ))}
+                  <td className="rounds__act">
+                    {r.undone_at ? (
+                      <span className="muted small">{c.score.roundUndone}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="icon-btn icon-btn--small"
+                        aria-label={c.score.undoRound(r.round_no, fmt)}
+                        disabled={act.busy}
+                        onClick={() =>
+                          void act.run(async () => {
+                            await undoRound(sheetId, r.round_no);
+                            data.reload();
+                          })
+                        }
+                      >
+                        <ArrowCounterClockwise size={18} aria-hidden="true" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="panel finish" aria-labelledby="finish-t">
+        <h2 id="finish-t" className="panel__title">
+          {c.score.finishTitle}
+        </h2>
+        <fieldset className="field">
+          <legend className="field__label">{c.score.winner}</legend>
+          <div className="segmented">
+            {Array.from({ length: sheet.teams }, (_, i) => (
+              <label key={i} className="segmented__opt">
+                <input type="radio" name="winner" checked={chosen === i + 1} onChange={() => setWinner(i + 1)} />
+                <span>
+                  <Crown size={16} weight={chosen === i + 1 ? 'fill' : 'regular'} aria-hidden="true" /> <bdi>{label(i + 1)}</bdi>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <button
+          type="button"
+          className="btn btn--primary btn--wide"
+          disabled={act.busy || live.length === 0 || chosen === 0}
+          onClick={() =>
+            void act.run(async () => {
+              const game = await finishScore(sheetId, chosen);
+              setResult({ game, undone: false });
+            })
+          }
+        >
+          <Trophy size={18} aria-hidden="true" />
+          {c.score.finish}
+        </button>
+        {live.length === 0 && <p className="muted small">{c.score.needRound}</p>}
+        <button
+          type="button"
+          className="btn btn--text btn--small"
+          disabled={act.busy}
+          onClick={() =>
+            window.confirm(c.score.discardConfirm) &&
+            void act.run(async () => {
+              await discardScore(sheetId);
+              data.reload();
+            })
+          }
+        >
+          {c.score.discard}
+        </button>
+      </section>
+    </div>
+  );
+}
+
+/** The running totals, big enough to read across the room; the leader carries the crown. */
+function Scoreboard({ totals, lead, label, names, teams }: { totals: number[]; lead: number; label: (t: number) => string; names: (t: number) => string; teams: number }) {
+  const { c, fmt } = usePrefs();
+  return (
+    <div className={`scoreboard scoreboard--${teams}`} role="group" aria-label={c.score.total}>
+      {totals.map((x, i) => (
+        <div key={i} className={lead === i + 1 ? 'scoreboard__team scoreboard__team--lead' : 'scoreboard__team'}>
+          <span className="scoreboard__name">
+            <bdi>{label(i + 1)}</bdi>
+          </span>
+          {teams === 2 && (
+            <span className="scoreboard__who muted small">
+              <bdi>{names(i + 1)}</bdi>
+            </span>
+          )}
+          <span className="scoreboard__total" aria-live="polite">
+            {fmt(x)}
+          </span>
+          {lead === i + 1 && (
+            <span className="tag tag--saffron scoreboard__lead">
+              <Crown size={14} weight="fill" aria-hidden="true" />
+              {c.score.leading}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 

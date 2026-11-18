@@ -63,7 +63,7 @@ function InboxBody() {
         art={<DallahArt />}
         title={t.inbox.emptyTitle}
         body={t.inbox.emptyBody}
-        actions={[{ label: t.inbox.enable, href: hrefFor('me'), primary: true }]}
+        actions={[{ label: t.inbox.enable, href: href.me('pings'), primary: true }]}
       />
     );
   }

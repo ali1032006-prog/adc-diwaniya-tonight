@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
     const subs: { id: string; endpoint: string; p256dh: string; auth: string }[] = await rest(
       `push_subscriptions?user_id=eq.${item.user_id}&select=id,endpoint,p256dh,auth`,
     );
-    const name = item.diwaniya?.name ?? (lang === 'ar' ? 'ديوانية الليلة' : 'Diwaniya Tonight');
+    const name = item.diwaniya?.name ?? (lang === 'ar' ? 'ديوانيتنا' : 'Diwaniyatna');
     const make = TEXT[lang][item.kind];
     if (!make) return Response.json({ sent: 0, skipped: 'kind' });
     const extra = item.kind === 'announcement' ? String(item.body ?? '').slice(0, 300) : GAME[lang][item.tbl?.game ?? ''] ?? '';

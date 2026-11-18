@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Lightning, UsersThree, Armchair, ChartBar, ArrowSquareOut } from '@phosphor-icons/react';
+import { Lightning, UsersThree, Armchair, ChartBar } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
 import { RequestSheet } from './Place';
 import { EmptyState } from '../components/EmptyState';
@@ -40,31 +40,11 @@ export function Tonight() {
   const { t } = usePrefs();
   return (
     <Screen title={t.tonight.title}>
-      <NeedsAccountOrTeach>
+      <NeedsAccount>
         <TonightList />
-      </NeedsAccountOrTeach>
+      </NeedsAccount>
     </Screen>
   );
-}
-
-/** Signed out, Tonight still teaches what it will show, then offers the gate. */
-function NeedsAccountOrTeach({ children }: { children: React.ReactNode }) {
-  const { status } = useSession();
-  const { t, c } = usePrefs();
-  if (status === 'signedOut' || status === 'offline') {
-    return (
-      <EmptyState
-        art={<SeatRing game="kout" seats={[null, null, null, null, null, null]} size={132} decorative />}
-        title={c.tonight.guestTitle}
-        body={c.tonight.guestBody}
-        actions={[
-          { label: c.gate.signIn, href: href.signin('signin', 'tonight'), primary: true },
-          { label: t.tonight.openYours, href: hrefFor('diwaniya') },
-        ]}
-      />
-    );
-  }
-  return <NeedsAccount>{children}</NeedsAccount>;
 }
 
 /**
@@ -124,12 +104,6 @@ function YourNight({ mine, onDone }: { mine: MyDiwaniya[]; onDone: () => void })
                 >
                   <ChartBar size={18} aria-hidden="true" />
                   {c.quick.score}
-                </a>
-              )}
-              {d.my_status === 'pending' && (
-                <a className="btn btn--quiet btn--small" href={href.place(d.id)} aria-label={`${c.quick.open} · ${d.name}`}>
-                  <ArrowSquareOut size={18} aria-hidden="true" />
-                  {c.quick.open}
                 </a>
               )}
             </span>

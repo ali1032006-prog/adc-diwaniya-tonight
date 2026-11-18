@@ -274,12 +274,19 @@ export async function getMyRequest(nightId: string): Promise<RequestRow | null> 
   return rows[0] ?? null;
 }
 
-export async function getPin(diwaniyaId: string): Promise<{ lat: number; lng: number; directions: string } | null> {
-  return unwrap(await db().from('diwaniya_pins').select('lat,lng,directions').eq('diwaniya_id', diwaniyaId).maybeSingle());
+export interface Pin {
+  lat: number;
+  lng: number;
+  directions: string;
+  /** Written address (ADC-LOG-764 item 2), read exactly like the pin. */
+  address: string;
+}
+export async function getPin(diwaniyaId: string): Promise<Pin | null> {
+  return unwrap(await db().from('diwaniya_pins').select('lat,lng,directions,address').eq('diwaniya_id', diwaniyaId).maybeSingle());
 }
 
-export async function setPin(diwaniyaId: string, lat: number, lng: number, directions: string) {
-  unwrap(await db().from('diwaniya_pins').upsert({ diwaniya_id: diwaniyaId, lat, lng, directions }));
+export async function setPin(diwaniyaId: string, lat: number, lng: number, directions: string, address = '') {
+  unwrap(await db().from('diwaniya_pins').upsert({ diwaniya_id: diwaniyaId, lat, lng, directions, address }));
 }
 
 export async function isFollowing(diwaniyaId: string): Promise<boolean> {
@@ -493,6 +500,70 @@ export interface RosterPerson {
 }
 export async function scoreRoster(diwaniyaId: string, tableId: string | null): Promise<RosterPerson[]> {
   return ((unwrap(await db().rpc('score_roster', { p_diwaniya: diwaniyaId, p_table: tableId })) as RosterPerson[]) ?? []);
+}
+
+// ---------------------------------------------------------------- live scoring (ADC-LOG-764 item 3)
+export interface SheetPlayer {
+  seat: number;
+  user_id: string | null;
+  name: string;
+  team: number;
+}
+export interface ScoreSheet {
+  id: string;
+  diwaniya_id: string;
+  table_id: string | null;
+  rule_pack: RulePack;
+  teams: number;
+  players: SheetPlayer[];
+  started_by: string;
+  status: 'open' | 'finished' | 'discarded';
+  game_id: string | null;
+  created_at: string;
+}
+export interface ScoreRound {
+  round_no: number;
+  points: number[];
+  added_by: string | null;
+  created_at: string;
+  undone_at: string | null;
+}
+const SHEET = 'id,diwaniya_id,table_id,rule_pack,teams,players,started_by,status,game_id,created_at';
+
+/** The open sheet for this table (or my own table-less one), so a refresh picks the game up again. */
+export async function openSheet(diwaniyaId: string, tableId: string | null, me: string | null): Promise<ScoreSheet | null> {
+  let q = db().from('score_sheets').select(SHEET).eq('diwaniya_id', diwaniyaId).eq('status', 'open');
+  q = tableId ? q.eq('table_id', tableId) : q.is('table_id', null).eq('started_by', me ?? '');
+  const rows = unwrap(await q.order('created_at', { ascending: false }).limit(1)) as ScoreSheet[];
+  return rows[0] ?? null;
+}
+export async function getSheet(id: string): Promise<{ sheet: ScoreSheet | null; rounds: ScoreRound[] }> {
+  const [sheet, rounds] = await Promise.all([
+    db().from('score_sheets').select(SHEET).eq('id', id).maybeSingle(),
+    db().from('score_rounds').select('round_no,points,added_by,created_at,undone_at').eq('sheet_id', id).order('round_no'),
+  ]);
+  return { sheet: unwrap(sheet) as ScoreSheet | null, rounds: (unwrap(rounds) as ScoreRound[]) ?? [] };
+}
+export async function startScore(diwaniyaId: string, pack: RulePack, tableId: string | null, players: SheetPlayer[]) {
+  return unwrap(await db().rpc('start_score', { p_diwaniya: diwaniyaId, p_rule_pack: pack, p_table: tableId, p_players: players })) as string;
+}
+export async function addRound(sheetId: string, points: number[]) {
+  return unwrap(await db().rpc('add_round', { p_sheet: sheetId, p_points: points })) as number;
+}
+export async function undoRound(sheetId: string, round: number) {
+  unwrap(await db().rpc('undo_round', { p_sheet: sheetId, p_round: round }));
+}
+export async function discardScore(sheetId: string) {
+  unwrap(await db().rpc('discard_score', { p_sheet: sheetId }));
+}
+export async function finishScore(sheetId: string, winner: number) {
+  return unwrap(await db().rpc('finish_score', { p_sheet: sheetId, p_winner: winner })) as string;
+}
+/** Running totals per team from the rounds still standing. */
+export function sheetTotals(teams: number, rounds: ScoreRound[]): number[] {
+  const out = Array.from({ length: teams }, () => 0);
+  for (const r of rounds) if (!r.undone_at) r.points.forEach((p, i) => (out[i] = (out[i] ?? 0) + p));
+  return out;
 }
 
 /** My diwaniyas (S11 tab inside League, item 6): followed, regular, visited or requested tonight, with tonight's state. */

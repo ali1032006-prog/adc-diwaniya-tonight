@@ -183,10 +183,11 @@ describe('pure helpers', () => {
 });
 
 describe('screens', () => {
-  it('Tonight signed out teaches and never calls the API', () => {
+  it('Tonight signed out shows the sign-in gate and never calls the API', () => {
     withAll(<Tonight />, { ...ready, status: 'signedOut', userId: null, profile: null, priv: null });
-    // Vi's 1/3 note: signed out it must not claim there are no seats; it says sign-in shows them.
-    expect(screen.getByRole('heading', { name: "Tonight's seats show once you sign in" })).toBeTruthy();
+    // Vi's 1/3 note still holds: signed out it must not claim there are no seats. (The shell sends a
+    // signed-out visit to sign-in first, ADC-LOG-764 item 5; this is the fallback if Tonight renders.)
+    expect(screen.getByRole('link', { name: 'Sign in' })).toBeTruthy();
     expect(screen.queryByText('No open seats near you tonight')).toBeNull();
     expect(api.listTonight).not.toHaveBeenCalled();
   });

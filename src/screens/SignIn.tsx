@@ -1,12 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { EnvelopeSimple, LockKey, ShieldCheck } from '@phosphor-icons/react';
 import { PushBar, ErrorNote } from '../components/ui';
-import { SeatRing } from '../components/SeatRing';
+import { LogoMark } from '../components/Logo';
 import { ProfileSetup } from '../components/account';
 import { BirthField, ConsentChecks } from '../components/consent';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
-import { hrefFor, WELCOMED } from '../lib/router';
+import { hrefFor } from '../lib/router';
 import { isAdult, savePendingRegister, startGoogle, takeReturnError } from '../lib/auth';
 
 /** The official "G" (Google's download bundle, see ASSET-LICENSES.md), never redrawn or recoloured. */
@@ -31,7 +31,7 @@ export function GoogleButton({ label, disabled, busy, busyLabel, onClick }: {
  * Ali ADC-LOG-751); profile setup after Google asks them again and the server checks them for real.
  */
 export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: string }) {
-  const { c, err } = usePrefs();
+  const { c, t, err } = usePrefs();
   const session = useSession();
   const [tab, setTab] = useState(mode);
   const [birth, setBirth] = useState('');
@@ -60,7 +60,6 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
     setBusy(true);
     try {
       if (register) savePendingRegister({ birth, terms });
-      localStorage.setItem(WELCOMED, '1');
       await startGoogle(from ? `#/${from}` : '#/tonight');
     } catch (e) {
       setBusy(false);
@@ -83,15 +82,20 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
 
   return (
     <>
-      <PushBar title={c.signin.title} parent={hrefFor('me')} />
+      {session.status === 'signedOut' || session.status === 'offline' ? (
+        // The first screen of the app when signed out (ADC-LOG-764 item 5): nothing to go back to.
+        <header className="appbar appbar--solo">
+          <h1 className="appbar__title">
+            <bdi>{t.appName}</bdi>
+          </h1>
+        </header>
+      ) : (
+        <PushBar title={c.signin.title} parent={hrefFor('me')} />
+      )}
       <div className="screen__body signin">
         <div className="signin__art" aria-hidden="true">
-          <SeatRing
-            game="kout"
-            seats={[{ initials: 'ب' }, { initials: 'ف' }, { initials: 'س' }, null, { initials: 'ح' }, { initials: 'ج' }]}
-            size={124}
-            decorative
-          />
+          {/* The launch logo lands here, so the splash hands straight over to sign-in. */}
+          <LogoMark size={112} />
         </div>
 
         {session.status === 'ready' && session.profile ? (

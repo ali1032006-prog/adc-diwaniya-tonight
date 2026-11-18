@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Crown, ChartBar, Lightning, MapPin, Star, Heart, Footprints, CalendarCheck } from '@phosphor-icons/react';
+import { Crown, ChartBar, Lightning, MapPin, Star, Heart, Footprints, CalendarCheck, BookOpenText } from '@phosphor-icons/react';
+import { MenuRow } from '../components/MenuRow';
 import { Screen } from './Tabs';
 import { EmptyState } from '../components/EmptyState';
 import { ScoreSheetArt, DallahArt } from '../components/Art';
@@ -65,8 +66,12 @@ function LeagueBody() {
         <span className="seg-tabs__pill" aria-hidden="true" style={{ ['--i' as string]: view === 'mine' ? 0 : 1 }} />
       </div>
       <div role="tabpanel" id={`lp-${view}`} aria-labelledby={`lv-${view}`} className="seg-panel" key={view}>
-        {view === 'mine' ? <MyDiwaniyas onSeason={() => setView('season')} /> : <SeasonPicker />}
+        {view === 'mine' ? <MyDiwaniyas /> : <SeasonPicker />}
       </div>
+      {/* Game guides (ADC-LOG-764 item 4): reachable from League and from the score sheet. */}
+      <ul className="menu menu--guides">
+        <MenuRow href={href.guides()} icon={BookOpenText} title={c.guides.entry} sub={c.guides.entrySub} />
+      </ul>
     </>
   );
 }
@@ -74,7 +79,7 @@ function LeagueBody() {
 const WHY_ICON = { follow: Heart, regular: Star, visit: Footprints, tonight: CalendarCheck } as const;
 
 /** My diwaniyas: where I go or follow, each with tonight's state and my request. */
-export function MyDiwaniyas({ onSeason }: { onSeason?: () => void }) {
+export function MyDiwaniyas() {
   const { c, t, fmt, err, prefs } = usePrefs();
   const list = useAsync(myDiwaniyaList, [], ['nights', 'requests', 'seats', 'game_tables']);
   if (list.loading && !list.data) return <Skeleton rows={2} />;
@@ -116,25 +121,9 @@ export function MyDiwaniyas({ onSeason }: { onSeason?: () => void }) {
               </span>
               <MineStatus d={d} />
             </a>
-            {(d.my_status === 'arrived' || d.seated_table) && d.night_id && (
-              <a
-                className="btn btn--quiet btn--small mine__act"
-                href={href.score(d.id, d.seated_table ?? d.my_table ?? undefined)}
-                aria-label={`${c.quick.score} · ${d.name}`}
-              >
-                <ChartBar size={18} aria-hidden="true" />
-                {c.quick.score}
-              </a>
-            )}
           </li>
         ))}
       </ul>
-      {onSeason && (
-        <button type="button" className="btn btn--text" onClick={onSeason}>
-          <Crown size={18} aria-hidden="true" />
-          {c.mine.toSeason}
-        </button>
-      )}
     </>
   );
 }
@@ -223,7 +212,7 @@ function Season({ id, name }: { id: string; name: string }) {
         art={<ScoreSheetArt />}
         title={t.league.emptyTitle}
         body={t.league.emptyBody}
-        actions={[{ label: t.league.score, href: href.score(id), primary: true }]}
+        actions={[]}
       />
     );
   }

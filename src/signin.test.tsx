@@ -140,7 +140,8 @@ describe('S2 Sign in and Register', () => {
       options: { redirectTo: window.location.origin + window.location.pathname, queryParams: { prompt: 'select_account' } },
     });
     expect(sessionStorage.getItem('dt.after-signin.v1')).toBe('#/league');
-    expect(localStorage.getItem('dt.welcomed.v1')).toBe('1');
+    // Welcome now plays after sign-in (ADC-LOG-764 item 5), so starting Google no longer skips it.
+    expect(localStorage.getItem('dt.welcomed.v1')).toBeNull();
   });
 
   it('Register keeps Google shut until 18+ and the Terms are given, and asks nothing else', async () => {
