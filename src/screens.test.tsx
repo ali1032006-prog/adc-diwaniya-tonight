@@ -205,7 +205,11 @@ describe('screens', () => {
     expect(screen.getByRole('img', { name: 'Kout table: 0 of 6 seats taken, 6 seats open' })).toBeTruthy();
     expect(screen.getByText('One short')).toBeTruthy();
     expect(screen.getByText('2 diwaniyas open tonight')).toBeTruthy();
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Baloot' }));
+    // Games are picked in the Filter sheet now (Ali's change list 5, ADC-LOG-806); jsdom keeps the
+    // dialog closed (no showModal), hence hidden: true.
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Baloot', hidden: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply', hidden: true }));
     expect(screen.queryByText('Diwaniya Al-Bahar')).toBeNull();
     expect(screen.getByText('1 diwaniya open tonight')).toBeTruthy();
     expect(screen.getByRole('link', { name: /Baloot House/ }).getAttribute('href')).toBe('#/d/d2');

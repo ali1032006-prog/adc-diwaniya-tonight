@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && sh scripts/check_prod_bundle.sh",
-    "build:preview": "tsc -b && PREVIEW_SIGNIN=1 vite build",
+    "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:sql": "python3 scripts/sql_test.py",

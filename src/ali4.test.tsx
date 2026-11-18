@@ -41,7 +41,7 @@ vi.mock('./lib/api', async (importActual) => {
 const { Score } = await import('./screens/Score');
 const { Board } = await import('./screens/Board');
 const { Me } = await import('./screens/Me');
-const { Tonight, filterNights, locationOptions } = await import('./screens/Tonight');
+const { filterNights } = await import('./screens/Tonight');
 const { PrefsSync } = await import('./App');
 
 const ME = '11111111-1111-4111-8111-111111111111';
@@ -368,28 +368,7 @@ describe('(4) Tonight: filter by location and by game', () => {
     expect(filterNights(list, ['baloot'], 'all').map((n) => n.id)).toEqual(['b']);
     expect(filterNights(list, ['baloot'], 'gov:jahra')).toEqual([]);
   });
-  it('the location list offers the places with a night tonight, with counts, by governorate', () => {
-    const opts = locationOptions(list, 'en');
-    expect(opts.map((g) => g.value)).toEqual(['gov:hawalli', 'gov:jahra']);
-    expect(opts[0].label).toBe('All of Hawalli (2)');
-    expect(opts[0].areas.map((a) => a.label)).toEqual(['Jabriya (1)', 'Salmiya (1)']);
-  });
-  it('shows a Location dropdown and the game chips; the old open-seats and my-area options are gone', async () => {
-    api.listTonight.mockResolvedValue(list);
-    api.myDiwaniyaList.mockResolvedValue([]);
-    withAll(<Tonight />);
-    const where = (await screen.findByLabelText(en.tonight.where)) as HTMLSelectElement;
-    expect(where.tagName).toBe('SELECT');
-    expect(screen.queryByText(en.tonight.openOnly)).toBeNull();
-    expect(screen.queryByText(en.quick.scopeGov)).toBeNull();
-    fireEvent.change(where, { target: { value: 'gov:jahra' } });
-    expect(await screen.findByText('Diwaniya c')).toBeTruthy();
-    expect(screen.queryByText('Diwaniya a')).toBeNull();
-    expect(localStorage.getItem('dt.tonight.where.v1')).toBe('gov:jahra');
-    fireEvent.change(where, { target: { value: 'all' } });
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Baloot' }));
-    expect(await screen.findByText('Diwaniya b')).toBeTruthy();
-    expect(screen.queryByText('Diwaniya a')).toBeNull();
-  });
+  // The on-page Location dropdown and game chips were replaced by one Filter button and its sheet
+  // (Ali's change list 5, ADC-LOG-806): ali5.test.tsx covers the new controls.
 });
 

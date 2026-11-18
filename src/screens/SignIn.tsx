@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { EnvelopeSimple, LockKey, ShieldCheck } from '@phosphor-icons/react';
 import { PushBar, ErrorNote } from '../components/ui';
 import { LogoMark } from '../components/Logo';
@@ -10,10 +10,7 @@ import { hrefFor } from '../lib/router';
 import { LINK_ELSEWHERE, LINK_EXPIRED, isAdult, savePendingRegister, startGoogle, takeReturnError } from '../lib/auth';
 import { Divider, EmailRegister, EmailSignIn, ResetRequest } from '../components/EmailAuth';
 
-// Preview builds only (ADC-LOG-775): __PREVIEW_SIGNIN__ is a build-time constant (vite.config.ts).
-// In `npm run build` it is the literal false, so this import is compiled away and the test form's
-// module is never emitted; scripts/check_prod_bundle.sh proves it on every production build.
-const TestSignIn = __PREVIEW_SIGNIN__ ? lazy(() => import('../preview/TestSignIn')) : null;
+import { LangSwitch } from '../components/LangSwitch';
 
 /** The official "G" (Google's download bundle, see ASSET-LICENSES.md), never redrawn or recoloured. */
 export function GoogleButton({ label, disabled, busy, busyLabel, onClick }: {
@@ -95,10 +92,12 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
     <>
       {session.status === 'signedOut' || session.status === 'offline' ? (
         // The first screen of the app when signed out (ADC-LOG-764 item 5): nothing to go back to.
+        // Ali's change list 5 item 3 (ADC-LOG-806): Arabic / English before signing in.
         <header className="appbar appbar--solo">
           <h1 className="appbar__title">
             <bdi>{t.appName}</bdi>
           </h1>
+          <LangSwitch className="appbar__lang" />
         </header>
       ) : (
         <PushBar title={c.signin.title} parent={hrefFor('me')} />
@@ -192,12 +191,6 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
             )}
 
             {error && <ErrorNote text={error} />}
-
-            {TestSignIn && tab === 'signin' && resetFor === null && (
-              <Suspense fallback={null}>
-                <TestSignIn from={from} />
-              </Suspense>
-            )}
 
             <section className="signin__how" aria-labelledby="signin-how">
               <h2 id="signin-how" className="signin__how-title">

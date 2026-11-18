@@ -19,15 +19,13 @@ SUPABASE_ENV_FILE=<env file> python3 scripts/live_smoke.py  # src/lib/api.ts end
 SUPABASE_ENV_FILE=<env file> npm run seed:mock  # re-create the mock pilot data on dev (ruling F); tonight's nights get today's date
 ```
 
-### Preview-only test-account sign-in (Agent Issue 52, ADC-LOG-775)
+### Review test accounts (Agent Issue 52; test sign-in section removed by Ali's change list 5, ADC-LOG-806)
 
 ```
-npm run build:preview   # PREVIEW_SIGNIN=1: adds the password form for the 4 dev test accounts (preview deploys only)
-npm run build           # production: the form is compiled away; scripts/check_prod_bundle.sh greps dist and fails the build if any of it is left
-SUPABASE_ENV_FILE=<env file> python3 scripts/create_test_accounts.py --check|--create|--email-on   # dev only
+SUPABASE_ENV_FILE=<env file> python3 scripts/create_test_accounts.py --check|--create|--email-on|--verify   # dev only
 ```
 
-Only `npm run build` output may ever be deployed to `main` / production. The four accounts (Jayce user/admin, Vi user/admin, `*.test@example.com`) are made with the Supabase admin API on `diwaniya-tonight-dev` only; their passwords are Ali's and live only in the profile `.env` files (`DIWANIYA_TEST_<JAYCE|VI>_<USER|ADMIN>_PASSWORD`). Public email sign-up stays closed: the `only_test_accounts_by_email` trigger on `auth.users` refuses any email/password account whose address is not on `private.test_accounts` (Google sign-up untouched; `live_smoke.py`'s own throwaway accounts pass only with its run switch).
+The four accounts (Jayce user/admin, Vi user/admin, `*.test@example.com`) live on `diwaniya-tonight-dev` only, are email-confirmed, and sign in through the normal email + password form like anyone else; there is no separate test form or preview build any more. Their passwords are Ali's and live only in the profile `.env` files (`DIWANIYA_TEST_<JAYCE|VI>_<USER|ADMIN>_PASSWORD`). `--verify` prints, per account, only whether the address is confirmed and whether the public password sign-in works (then signs that session out).
 
 The app reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from a git-ignored `.env.local` at build time. The publishable key is meant for browsers; RLS and the RPCs guard the data.
 

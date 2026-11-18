@@ -1103,17 +1103,6 @@ fieldset:disabled .input {
 }
 
 /* Chips (filters, games) */
-.filters {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin-inline: -20px;
-  padding: 2px 20px 6px;
-}
-.filters::-webkit-scrollbar {
-  display: none;
-}
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -1122,12 +1111,6 @@ fieldset:disabled .input {
   margin: 0;
   padding: 0;
   min-width: 0;
-}
-.filters .chips {
-  flex-wrap: nowrap;
-}
-.filters > * {
-  flex: none;
 }
 .chip {
   position: relative;
@@ -3188,7 +3171,22 @@ button.link-row:focus-visible {
   max-width: 560px;
 }
 .appbar--solo {
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+}
+.appbar--solo > .appbar__title {
+  grid-column: 2;
+  text-align: center;
+}
+.appbar--solo > .appbar__lang {
+  grid-column: 3;
+  justify-self: end;
+}
+/* Ali's change list 5 item 3: the language switch before sign-in (sign-in, Welcome). */
+.lang-switch {
+  gap: 6px;
+  min-height: 44px;
 }
 
 /* (7) Settings menus: one button per section */
@@ -4264,21 +4262,81 @@ html,
   }
 }
 
-/* (4) Tonight: the Location dropdown sits in the filter row. */
-.filters .field {
-  flex: none;
+/* Ali's change list 5 item 1 (ADC-LOG-806): one Filter button; its sheet holds Location and Game. */
+.filter-bar {
   display: flex;
   align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.filter-btn {
+  position: relative;
+  flex: none;
   gap: 8px;
-}
-.filters .field__label {
-  font-size: 0.875rem;
-  color: var(--ink-muted);
-}
-.input--where {
-  width: auto;
-  min-width: 11rem;
-  max-width: 16rem;
   min-height: 44px;
-  padding-block: 6px;
+}
+.filter-btn--on {
+  border-color: var(--saffron);
+}
+.filter-btn__badge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--saffron);
+  color: var(--on-saffron);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 22px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  animation: check-in 180ms var(--ease-enter) both;
+}
+.filter-bar__summary {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filter-sheet {
+  display: grid;
+  gap: 20px;
+}
+.filter-sheet__part {
+  display: grid;
+  gap: 12px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.filter-sheet__head {
+  padding: 0;
+  margin-block-end: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.filter-sheet__pick {
+  animation: fade-in 180ms var(--ease-enter) both;
+}
+.filter-sheet__live {
+  margin: 0;
+}
+.filter-sheet__actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  margin-inline: -20px;
+  padding: 12px 20px 4px;
+  background: var(--surface);
+  border-top: 1px solid var(--hairline);
+}
+@media (prefers-reduced-motion: reduce) {
+  .filter-btn__badge,
+  .filter-sheet__pick {
+    animation: none;
+  }
 }

@@ -5,6 +5,10 @@
   python3 scripts/create_test_accounts.py --create    create/refresh the 4 accounts, profiles (18+, Terms), admins
   python3 scripts/create_test_accounts.py --email-on  switch the dev project's email provider on (confirm email
                                                       stays ON, ADC-LOG-802) and probe a wrong password
+  python3 scripts/create_test_accounts.py --verify    per account: email confirmed? public password sign-in works?
+                                                      (the same /token call the app's sign-in form makes, with the
+                                                      publishable key; the session is signed out at once). Prints
+                                                      labels and booleans only (Ali's change list 5, ADC-LOG-806).
 
 DEV ONLY: refuses any project ref other than DIWANIYA_TONIGHT_DEV_SUPABASE_REF. Passwords are Ali's: they are
 read from the env file named by SUPABASE_ENV_FILE under the key names below and never printed, logged or sent.
@@ -159,6 +163,27 @@ def email_on():
     print("wrong-password probe:", code, (out or {}).get("error_code") or (out or {}).get("msg"))
 
 
+def verify():
+    rows = sql("select t.label, u.email_confirmed_at is not null as confirmed, u.banned_until is null as not_banned "
+               "from private.test_accounts t join auth.users u on lower(u.email) = t.email order by t.label;")
+    by = {r["label"]: r for r in rows}
+    pub = E.get("DIWANIYA_TONIGHT_DEV_SUPABASE_PUBLISHABLE_KEY", "")
+    ok = True
+    for label, email, _, admin, pkey in ACCOUNTS:
+        r = by.get(label, {})
+        code, out = http("POST", URL + "/auth/v1/token?grant_type=password", {"apikey": pub},
+                         {"email": email, "password": E.get(pkey, "")})
+        token = (out or {}).get("access_token") if code == 200 else None
+        signed_in = bool(token)
+        if token:
+            http("POST", URL + "/auth/v1/logout?scope=local", {"apikey": pub, "Authorization": "Bearer " + token})
+        line_ok = bool(r.get("confirmed")) and bool(r.get("not_banned")) and signed_in
+        ok = ok and line_ok
+        print(f"{label}: on_allow_list={bool(r)} email_confirmed={bool(r.get('confirmed'))} "
+              f"public_password_sign_in={signed_in} (HTTP {code}) admin={'yes' if admin else 'no'}")
+    return ok
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1:2]
     if cmd == ["--check"]:
@@ -167,5 +192,7 @@ if __name__ == "__main__":
         create()
     elif cmd == ["--email-on"]:
         email_on()
+    elif cmd == ["--verify"]:
+        sys.exit(0 if verify() else 1)
     else:
         sys.exit(__doc__)
