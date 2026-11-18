@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Crown, ChartBar, Lightning, MapPin, Star, Heart, Footprints, CalendarCheck, BookOpenText } from '@phosphor-icons/react';
+import { Crown, Lightning, MapPin, Star, Heart, Footprints, CalendarCheck, BookOpenText } from '@phosphor-icons/react';
 import { MenuRow } from '../components/MenuRow';
 import { Screen } from './Tabs';
 import { EmptyState } from '../components/EmptyState';
@@ -187,10 +187,6 @@ function SeasonPicker() {
             </select>
           </Field>
         )}
-        <a className="btn btn--primary btn--small season-head__score" href={href.score(current.id)}>
-          <ChartBar size={18} aria-hidden="true" />
-          {t.league.score}
-        </a>
       </div>
       <Season id={current.id} name={current.name} />
     </>

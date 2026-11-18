@@ -38,6 +38,8 @@ export interface Diwaniya extends DiwaniyaLite {
   approval: 'host' | 'regulars_auto';
   guest_cap: number;
   pin_unlock_minutes: number;
+  /** Guests may write to the host (Ali's change list 3, item 2); only the host switches it. */
+  messages_on: boolean;
   host?: { display_name: string } | null;
 }
 export interface NightRow {
@@ -161,7 +163,7 @@ const SEATS = 'seats(seat_no,user_id,walk_in_name,profile:profiles(display_name)
 const QUEUE = 'queue:table_queue(user_id,joined_at,profile:profiles(display_name))';
 const TABLES = `tables:game_tables(id,game,seat_count,label,queue_mode,need_one,${SEATS},${QUEUE})`;
 const DW_LITE = 'id,name,area,usual_slot,host_id,visibility';
-const DW_FULL = `${DW_LITE},about,rules,approval,guest_cap,pin_unlock_minutes,host:profiles!diwaniyas_host_id_fkey(display_name)`;
+const DW_FULL = `${DW_LITE},about,rules,approval,guest_cap,pin_unlock_minutes,messages_on,host:profiles!diwaniyas_host_id_fkey(display_name)`;
 
 function sortTables(n: NightRow): NightRow {
   return { ...n, tables: [...(n.tables ?? [])].sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id)) };
@@ -364,7 +366,7 @@ export async function createDiwaniya(name: string, area: string) {
 
 export type DiwaniyaSettings = Pick<
   Diwaniya,
-  'name' | 'area' | 'about' | 'rules' | 'visibility' | 'approval' | 'guest_cap' | 'pin_unlock_minutes' | 'usual_slot'
+  'name' | 'area' | 'about' | 'rules' | 'visibility' | 'approval' | 'guest_cap' | 'pin_unlock_minutes' | 'usual_slot' | 'messages_on'
 >;
 export async function updateDiwaniya(id: string, s: Partial<DiwaniyaSettings>) {
   unwrap(await db().from('diwaniyas').update(s).eq('id', id));
@@ -677,13 +679,14 @@ export async function listInbox(): Promise<InboxRow[]> {
     await db()
       .from('inbox')
       .select('id,kind,body,diwaniya_id,night_id,request_id,table_id,created_at,read_at,diwaniya:diwaniyas(name)')
+      .neq('kind', 'message') // message pings belong to Messages, counted there
       .order('created_at', { ascending: false })
       .limit(80),
   ) as unknown as InboxRow[];
 }
 
 export async function unreadCount(): Promise<number> {
-  const r = await db().from('inbox').select('id', { count: 'exact', head: true }).is('read_at', null);
+  const r = await db().from('inbox').select('id', { count: 'exact', head: true }).is('read_at', null).neq('kind', 'message');
   if (r.error) throw new ApiError(r.error.code ?? 'unknown', r.error.message);
   return r.count ?? 0;
 }
@@ -773,6 +776,8 @@ export interface QueueItem {
   target_label: string;
   /** The reporter has a real link to the target (ADC-SEC-20); only these count toward a hold. */
   counts_to_hold?: boolean;
+  /** The reported message, kept word for word (Ali's change list 3, item 2). */
+  evidence?: string;
   reporter: { id: string | null; name: string | null };
   target_user: { id: string; name: string; hidden_at: string | null; held_at: string | null; open_reports: number } | null;
   target_diwaniya: { id: string; name: string; area: string; hidden_at: string | null; held_at: string | null; open_reports: number } | null;
@@ -810,6 +815,90 @@ export interface AdminSummary {
 }
 export async function adminSummary(): Promise<AdminSummary> {
   return unwrap(await db().rpc('admin_summary')) as AdminSummary;
+}
+
+// ---------------------------------------------------------------- messages to hosts (Ali's change list 3, item 2)
+
+export interface ThreadSummary {
+  id: string;
+  diwaniya_id: string;
+  diwaniya_name: string;
+  last_at: string;
+  role: 'host' | 'guest';
+  other_id: string;
+  other_name: string;
+  last_body: string | null;
+  last_mine: boolean | null;
+  unread: number;
+  /** A block either way: the thread stays readable, nobody can write. */
+  blocked: boolean;
+  /** False when the diwaniya stopped taking messages (the host can still answer). */
+  open: boolean;
+}
+export interface MessageRow {
+  id: string;
+  seq: number;
+  thread_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+}
+export const MESSAGE_MAX = 1000;
+
+export async function myThreads(): Promise<ThreadSummary[]> {
+  return ((unwrap(await db().rpc('my_threads')) as ThreadSummary[]) ?? []);
+}
+export async function threadMessages(threadId: string): Promise<MessageRow[]> {
+  return (unwrap(
+    await db().from('messages').select('id,seq,thread_id,sender_id,body,created_at,read_at').eq('thread_id', threadId).order('seq').limit(500),
+  ) as MessageRow[]) ?? [];
+}
+/** The thread I already have with this diwaniya's host, if any (RLS: only mine are visible). */
+export async function threadWith(diwaniyaId: string): Promise<string | null> {
+  const me = await uid();
+  const rows = unwrap(
+    await db().from('message_threads').select('id').eq('diwaniya_id', diwaniyaId).eq('guest_id', me).limit(1),
+  ) as { id: string }[];
+  return rows[0]?.id ?? null;
+}
+export async function startThread(diwaniyaId: string, body: string): Promise<string> {
+  return unwrap(await db().rpc('start_thread', { p_diwaniya: diwaniyaId, p_body: body })) as string;
+}
+export async function sendMessage(threadId: string, body: string): Promise<string> {
+  return unwrap(await db().rpc('send_message', { p_thread: threadId, p_body: body })) as string;
+}
+export async function markThreadRead(threadId: string) {
+  unwrap(await db().rpc('mark_thread_read', { p_thread: threadId }));
+}
+export async function unreadMessages(): Promise<number> {
+  return (unwrap(await db().rpc('unread_messages')) as number) ?? 0;
+}
+export async function reportMessage(messageId: string, reason: ReportReason, details: string) {
+  unwrap(await db().rpc('report_message', { p_message: messageId, p_reason: reason, p_details: details }));
+}
+
+// ---------------------------------------------------------------- Score tab (item 3)
+
+export interface ScoreTarget {
+  diwaniya_id: string;
+  name: string;
+  table_id: string | null;
+  game: Game | null;
+  seat_count: number | null;
+  label: string;
+  starts_at: string | null;
+  /** seated: his own table; here: checked in tonight; host: he runs it; regular: a regular there. */
+  why: 'seated' | 'here' | 'host' | 'regular';
+}
+export interface ScoreTargets {
+  targets: ScoreTarget[];
+  /** Why there is nothing to score: approved (sit first), pending (host hasn't answered), none. */
+  reason: 'approved' | 'pending' | 'none' | null;
+}
+export async function scoreTargets(): Promise<ScoreTargets> {
+  const r = unwrap(await db().rpc('score_targets')) as ScoreTargets | null;
+  return { targets: r?.targets ?? [], reason: r?.reason ?? null };
 }
 
 // ---------------------------------------------------------------- live updates

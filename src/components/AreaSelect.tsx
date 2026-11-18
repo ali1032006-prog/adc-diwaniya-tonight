@@ -51,7 +51,7 @@ export function AreaMultiSelect({ value, onChange, max = 10, label }: { value: s
               <bdi>{areaLabel(a, prefs.lang)}</bdi>
               <button
                 type="button"
-                className="area-chip__x"
+                className="area-chip__x area-chip__x--danger"
                 aria-label={c.areas.remove(areaLabel(a, prefs.lang))}
                 onClick={() => onChange(chosen.filter((x) => x !== a))}
               >

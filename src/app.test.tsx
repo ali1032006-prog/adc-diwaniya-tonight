@@ -89,7 +89,7 @@ describe('NavBar', () => {
   it('has 5 labelled tabs and marks the active one', () => {
     withPrefs(<NavBar active="league" onReselect={() => {}} />, { lang: 'en' });
     const links = screen.getAllByRole('link');
-    expect(links.map((l) => l.textContent)).toEqual(['Tonight', 'Diwaniya', 'League', 'Inbox', 'Me']);
+    expect(links.map((l) => l.textContent)).toEqual(['Tonight', 'Diwaniya', 'Score', 'League', 'Me']);
     expect(screen.getByRole('link', { name: 'League' }).getAttribute('aria-current')).toBe('page');
   });
   it('moves the pill by tab index (one pill element, transform only)', () => {
@@ -106,8 +106,8 @@ describe('NavBar', () => {
   });
   it('calls onReselect when the active tab is tapped again', () => {
     let hits = 0;
-    withPrefs(<NavBar active="inbox" onReselect={() => hits++} />, { lang: 'en' });
-    fireEvent.click(screen.getByRole('link', { name: 'Inbox' }));
+    withPrefs(<NavBar active="score" onReselect={() => hits++} />, { lang: 'en' });
+    fireEvent.click(screen.getByRole('link', { name: 'Score' }));
     fireEvent.click(screen.getByRole('link', { name: 'Me' }));
     expect(hits).toBe(1);
   });

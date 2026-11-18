@@ -47,10 +47,13 @@ export function errorText(e: unknown, c: Copy): string {
   if (code === 'P0002' || code === 'PGRST116') return c.errors.notFound;
   const msg = e instanceof ApiError ? e.message : '';
   if (/under review/i.test(msg)) return c.errors.underReview;
+  if (/not taking messages/i.test(msg)) return c.errors.notTaking;
+  if (/cannot message each other/i.test(msg)) return c.errors.cannotMessage;
   if (code === '42501') return c.errors.forbidden;
   if (code === '23514') return c.errors.cap;
   if (code === '54000' && /this night/i.test(msg)) return c.errors.nightTries;
   if (code === '54000' && /wait a few minutes/i.test(msg)) return c.errors.slowDown;
+  if (code === '54000' && /host to answer/i.test(msg)) return c.errors.waitHost;
   if (code === '54000') return c.errors.limit;
   if (code === '22023' && /not at this diwaniya/i.test(msg)) return c.errors.notThere;
   if (code === '23505') return c.errors.duplicate;

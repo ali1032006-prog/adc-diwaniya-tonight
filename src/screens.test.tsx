@@ -90,7 +90,7 @@ afterEach(cleanup);
 describe('router (slice 3 routes)', () => {
   it('parses pushed screens by uuid and refuses malformed ids', () => {
     expect(parseHash(`#/d/${DW}`)).toEqual({ name: 'place', id: DW });
-    expect(parseHash(`#/settings/${DW}`)).toEqual({ name: 'settings', id: DW });
+    expect(parseHash(`#/settings/${DW}`)).toEqual({ name: 'diwaniya', id: DW }); // retired into the one Diwaniya page
     expect(parseHash(`#/player/${ME}`)).toEqual({ name: 'player', id: ME });
     expect(parseHash(`#/score/${DW}?table=${T1}`)).toEqual({ name: 'score', id: DW, table: T1 });
     expect(parseHash(`#/score/${DW}?table=nope`)).toEqual({ name: 'score', id: DW });
@@ -98,9 +98,9 @@ describe('router (slice 3 routes)', () => {
     expect(parseHash('#/d/<script>')).toEqual({ name: 'tonight' });
   });
   it('keeps the pill on the tab a pushed screen came from', () => {
-    expect(tabOf({ name: 'place', id: DW }, 'inbox')).toBe('inbox');
+    expect(tabOf({ name: 'place', id: DW }, 'diwaniya')).toBe('diwaniya');
     expect(tabOf({ name: 'place', id: DW }, 'league')).toBe('tonight');
-    expect(tabOf({ name: 'settings', id: DW })).toBe('diwaniya');
+    expect(tabOf({ name: 'diwaniya', id: DW })).toBe('diwaniya');
     expect(tabOf({ name: 'player', id: ME }, 'me')).toBe('league');
   });
 });
@@ -239,7 +239,7 @@ describe('screens', () => {
     api.listFollowed.mockResolvedValue([]);
     withAll(<Board />);
     expect(await screen.findByRole('heading', { name: 'Open your diwaniya' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Create diwaniya' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeTruthy();
   });
   it('Inbox marks an item read when it is opened', async () => {
     api.listInbox.mockResolvedValue([

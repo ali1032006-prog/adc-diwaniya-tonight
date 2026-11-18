@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Lightning, UsersThree, Armchair, ChartBar } from '@phosphor-icons/react';
+import { Lightning, UsersThree, Armchair } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
 import { RequestSheet } from './Place';
 import { EmptyState } from '../components/EmptyState';
@@ -95,16 +95,6 @@ function YourNight({ mine, onDone }: { mine: MyDiwaniya[]; onDone: () => void })
                   <Armchair size={18} aria-hidden="true" />
                   {c.quick.sitNow}
                 </button>
-              )}
-              {(d.my_status === 'arrived' || d.seated_table) && (
-                <a
-                  className="btn btn--primary btn--small"
-                  href={href.score(d.id, d.seated_table ?? d.my_table ?? undefined)}
-                  aria-label={`${c.quick.score} · ${d.name}`}
-                >
-                  <ChartBar size={18} aria-hidden="true" />
-                  {c.quick.score}
-                </a>
               )}
             </span>
           </li>

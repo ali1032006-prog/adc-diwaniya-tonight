@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Crown, X, ArrowCounterClockwise, ArrowsClockwise, BookOpenText, Plus, Trophy } from '@phosphor-icons/react';
+import { Crown, Trash, ArrowCounterClockwise, ArrowsClockwise, BookOpenText, Plus, Trophy } from '@phosphor-icons/react';
+import { Screen } from './Tabs';
+import { EmptyState } from '../components/EmptyState';
+import { DallahArt } from '../components/Art';
 import { ErrorNote, OkNote, Field, Skeleton } from '../components/ui';
 import { NeedsAccount } from '../components/account';
-import { WovenBand } from '../components/WovenBand';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { useAction, useAsync } from '../lib/useAsync';
@@ -20,6 +22,8 @@ import {
   undoGame,
   undoRound,
   RULE_PACKS,
+  scoreTargets,
+  type ScoreTarget,
   type ResultInput,
   type RosterPerson,
   type RulePack,
@@ -27,7 +31,7 @@ import {
   type TableRow,
 } from '../lib/api';
 import { gameOfPack } from '../lib/guides';
-import { back, href, hrefFor } from '../lib/router';
+import { href, hrefFor } from '../lib/router';
 
 export interface Player {
   user_id: string | null;
@@ -97,24 +101,61 @@ export function buildResults(pack: RulePack, players: Player[], points: number[]
   });
 }
 
-/** S10 Score a game: full screen at every size, big numbers for the room. */
-export function Score({ id, table }: { id: string; table?: string }) {
+/** S10 Score (Ali's change list 3, item 3): the middle tab. Without an id it picks up the table he can score now. */
+export function Score({ id, table }: { id?: string; table?: string }) {
   const { c } = usePrefs();
   return (
-    <div className="score-screen">
-      <header className="appbar appbar--push">
-        <button type="button" className="icon-btn" aria-label={c.common.close} onClick={() => back(hrefFor('league'))}>
-          <X size={24} aria-hidden="true" />
-        </button>
-        <h1 className="appbar__title appbar__title--push">{c.score.title}</h1>
-      </header>
-      <WovenBand className="appbar__band" />
-      <div className="screen__body">
-        <NeedsAccount>
-          <ScoreBody id={id} tableId={table} />
-        </NeedsAccount>
+    <Screen title={c.score.title}>
+      <div className="score-screen">
+        <NeedsAccount>{id ? <ScoreBody id={id} tableId={table} /> : <ScoreNow />}</NeedsAccount>
       </div>
-    </div>
+    </Screen>
+  );
+}
+
+/** What to score right now, best first (server: score_targets); the first one opens straight away. */
+function ScoreNow() {
+  const { c, t, err } = usePrefs();
+  const targets = useAsync(scoreTargets, [], ['seats', 'requests', 'nights', 'game_tables', 'regulars']);
+  const [pick, setPick] = useState('');
+  if (targets.loading && !targets.data) return <Skeleton rows={3} />;
+  if (targets.error != null && !targets.data) return <ErrorNote text={err(targets.error)} onRetry={targets.reload} />;
+  const list = targets.data?.targets ?? [];
+  if (list.length === 0) {
+    const reason = targets.data?.reason ?? 'none';
+    const [title, body] =
+      reason === 'approved'
+        ? [c.scoreTab.approvedTitle, c.scoreTab.approvedBody]
+        : reason === 'pending'
+          ? [c.scoreTab.pendingTitle, c.scoreTab.pendingBody]
+          : [c.scoreTab.noneTitle, c.scoreTab.noneBody];
+    return <EmptyState art={<DallahArt />} title={title} body={body} actions={[{ label: c.scoreTab.toTonight, href: hrefFor('tonight'), primary: true }]} />;
+  }
+  const keyOf = (x: ScoreTarget) => `${x.diwaniya_id}:${x.table_id ?? ''}`;
+  const cur = list.find((x) => keyOf(x) === pick) ?? list[0];
+  const tableName = (x: ScoreTarget) => (x.table_id ? x.label || (x.game ? t.games[x.game] : c.roster.thisTable) : c.scoreTab.noTable);
+  return (
+    <>
+      <div className="score-now">
+        {list.length > 1 ? (
+          <Field label={c.scoreTab.others}>
+            <select className="input" value={keyOf(cur)} onChange={(e) => setPick(e.target.value)}>
+              {list.map((x) => (
+                <option key={keyOf(x)} value={keyOf(x)}>
+                  {`${c.scoreTab.lead(x.name, tableName(x))} · ${c.scoreTab.why[x.why]}`}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : (
+          <p className="score-now__lead">
+            <bdi>{c.scoreTab.lead(cur.name, tableName(cur))}</bdi>
+            <span className="tag tag--camel">{c.scoreTab.why[cur.why]}</span>
+          </p>
+        )}
+      </div>
+      <ScoreBody key={keyOf(cur)} id={cur.diwaniya_id} tableId={cur.table_id ?? undefined} />
+    </>
   );
 }
 
@@ -488,7 +529,7 @@ function LiveSheet({ diwaniyaId, sheetId, notice, onNext }: { diwaniyaId: string
         {live.length === 0 && <p className="muted small">{c.score.needRound}</p>}
         <button
           type="button"
-          className="btn btn--text btn--small"
+          className="btn btn--danger btn--small"
           disabled={act.busy}
           onClick={() =>
             window.confirm(c.score.discardConfirm) &&
@@ -498,6 +539,7 @@ function LiveSheet({ diwaniyaId, sheetId, notice, onNext }: { diwaniyaId: string
             })
           }
         >
+          <Trash size={16} aria-hidden="true" />
           {c.score.discard}
         </button>
       </section>

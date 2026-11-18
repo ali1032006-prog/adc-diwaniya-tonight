@@ -13,26 +13,27 @@ import { Splash, SPLASHED } from './components/Logo';
 import { PrefsContext, loadPrefs, savePrefs, type Prefs } from './lib/prefs';
 import { SessionProvider, useSession } from './lib/session';
 import { useAsync } from './lib/useAsync';
-import { unreadCount } from './lib/api';
+import { unreadCount, unreadMessages } from './lib/api';
+import { UnreadContext } from './lib/unread';
 import { dirFor, STRINGS } from './lib/i18n';
-import { TABS, WELCOMED, currentFrom, go, href, tabOf, useRoute, type Route, type Tab } from './lib/router';
+import { TABS, WELCOMED, currentFrom, go, href, isPushed, tabOf, useRoute, type Route, type Tab } from './lib/router';
 
 // Screens most visits never open load on demand, so the first paint carries less script
 // (impeccable audit r1/r2 P2: one 740 kB chunk).
-const Settings = lazy(() => import('./screens/Settings').then((m) => ({ default: m.Settings })));
 const Score = lazy(() => import('./screens/Score').then((m) => ({ default: m.Score })));
 const Player = lazy(() => import('./screens/Player').then((m) => ({ default: m.Player })));
 const Terms = lazy(() => import('./screens/Terms').then((m) => ({ default: m.Terms })));
 const Pings = lazy(() => import('./screens/Pings').then((m) => ({ default: m.Pings })));
 const Admin = lazy(() => import('./screens/Admin').then((m) => ({ default: m.Admin })));
 const Guides = lazy(() => import('./screens/Guides').then((m) => ({ default: m.Guides })));
+const Messages = lazy(() => import('./screens/Messages').then((m) => ({ default: m.Messages })));
+const Thread = lazy(() => import('./screens/Messages').then((m) => ({ default: m.Thread })));
+const Dm = lazy(() => import('./screens/Messages').then((m) => ({ default: m.Dm })));
 
 function screenFor(route: Route): React.JSX.Element {
   switch (route.name) {
     case 'place':
       return <Place id={route.id} />;
-    case 'settings':
-      return <Settings id={route.id} section={route.section} />;
     case 'score':
       return <Score id={route.id} table={route.table} />;
     case 'signin':
@@ -48,11 +49,17 @@ function screenFor(route: Route): React.JSX.Element {
     case 'player':
       return <Player id={route.id} />;
     case 'diwaniya':
-      return <Board />;
+      return <Board id={route.id} />;
     case 'league':
       return <League />;
     case 'inbox':
       return <Inbox />;
+    case 'messages':
+      return <Messages />;
+    case 'thread':
+      return <Thread id={route.id} />;
+    case 'dm':
+      return <Dm id={route.id} />;
     case 'me':
       return <Me section={route.section} />;
     default:
@@ -100,8 +107,19 @@ function Shell() {
     sessionStorage.setItem(SPLASHED, '1');
     setSplash(false);
   }, []);
-  // Saffron unread count on the Inbox tab, kept live.
-  const unread = useAsync(() => (status === 'ready' ? unreadCount() : Promise.resolve(0)), [status], status === 'ready' ? ['inbox'] : []);
+  // Unread Inbox pings and new messages for the top menu's badge (item 1), kept live.
+  const ready = status === 'ready';
+  const inbox = useAsync(() => (ready ? unreadCount() : Promise.resolve(0)), [ready], ready ? ['inbox'] : []);
+  const msgs = useAsync(() => (ready ? unreadMessages() : Promise.resolve(0)), [ready], ready ? ['messages'] : []);
+  const unread = useMemo(() => ({ inbox: inbox.data ?? 0, messages: msgs.data ?? 0 }), [inbox.data, msgs.data]);
+  // Reading a thread or the inbox changes the counts; refresh them on every move.
+  const reloadInbox = inbox.reload;
+  const reloadMsgs = msgs.reload;
+  useEffect(() => {
+    if (!ready) return;
+    reloadInbox();
+    reloadMsgs();
+  }, [route, ready, reloadInbox, reloadMsgs]);
   useEffect(() => {
     if ((TABS as readonly string[]).includes(route.name)) lastTab.current = route.name as Tab;
   }, [route.name]);
@@ -142,22 +160,15 @@ function Shell() {
       </main>
     );
   }
-  const key = route.name + ('id' in route ? route.id : '') + ('section' in route ? route.section ?? '' : '');
-  const pushed = 'id' in route || ('section' in route && !!route.section) || ['signin', 'terms', 'pings', 'admin', 'guides'].includes(route.name);
-  // Score a game is full screen: the bar steps aside for the room.
-  if (route.name === 'score') {
-    return (
-      <main className="screen screen--full" key={key}>
-        <Suspense fallback={<Skeleton rows={4} />}>{screenFor(route)}</Suspense>
-      </main>
-    );
-  }
+  const key = route.name + ('id' in route ? route.id ?? '' : '') + ('section' in route ? route.section ?? '' : '');
   return (
-    <div className="shell">
-      <NavBar active={active} onReselect={reselect} inboxCount={unread.data ?? 0} />
-      <main className={pushed ? 'screen screen--push' : 'screen'} key={key}>
-        <Suspense fallback={<Skeleton rows={4} />}>{screenFor(route)}</Suspense>
-      </main>
-    </div>
+    <UnreadContext.Provider value={unread}>
+      <div className="shell">
+        <NavBar active={active} onReselect={reselect} />
+        <main className={isPushed(route) ? 'screen screen--push' : 'screen'} key={key}>
+          <Suspense fallback={<Skeleton rows={4} />}>{screenFor(route)}</Suspense>
+        </main>
+      </div>
+    </UnreadContext.Provider>
   );
 }

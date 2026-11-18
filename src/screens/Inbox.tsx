@@ -1,10 +1,9 @@
-import { Bell, CheckCircle, Lightning, XCircle, UserPlus, Warning, Prohibit, Megaphone, UserGear, ShieldWarning } from '@phosphor-icons/react';
+import { Bell, CheckCircle, Lightning, XCircle, UserPlus, Warning, Prohibit, Megaphone, UserGear, ShieldWarning, X } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
-import { Screen } from './Tabs';
 import { EmptyState } from '../components/EmptyState';
 import { DallahArt } from '../components/Art';
 import { NeedsAccount } from '../components/account';
-import { ErrorNote, Skeleton } from '../components/ui';
+import { ErrorNote, PushBar, Skeleton } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 import { useAction, useAsync } from '../lib/useAsync';
 import { decideRequest, listInbox, markRead, requestStatuses, type InboxKind, type InboxRow } from '../lib/api';
@@ -31,15 +30,18 @@ export function inboxTarget(i: Pick<InboxRow, 'kind' | 'diwaniya_id'>): string {
   return i.diwaniya_id ? href.place(i.diwaniya_id) : hrefFor('tonight');
 }
 
-/** S13 Inbox: requests, approvals, 'need one' pings and no-show marks, newest first. */
+/** S13 Inbox, opened from the top menu (Ali's change list 3, item 1): requests, approvals, pings, newest first. */
 export function Inbox() {
   const { t } = usePrefs();
   return (
-    <Screen title={t.inbox.title}>
-      <NeedsAccount>
-        <InboxBody />
-      </NeedsAccount>
-    </Screen>
+    <>
+      <PushBar title={t.inbox.title} parent={hrefFor('tonight')} />
+      <div className="screen__body">
+        <NeedsAccount>
+          <InboxBody />
+        </NeedsAccount>
+      </div>
+    </>
   );
 }
 
@@ -136,7 +138,7 @@ function InboxBody() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn--quiet btn--small"
+                    className="btn btn--danger btn--small"
                     disabled={act.busy}
                     aria-label={`${c.board.decline} · ${i.diwaniya?.name ?? ''} · ${time(i.created_at)}`}
                     onClick={() =>
@@ -147,6 +149,7 @@ function InboxBody() {
                       })
                     }
                   >
+                    <X size={16} aria-hidden="true" />
                     {c.board.decline}
                   </button>
                 </div>

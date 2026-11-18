@@ -166,6 +166,14 @@ function ReportCard({ item, onDone }: { item: QueueItem; onDone: () => void }) {
           {item.counts_to_hold != null && <> · {item.counts_to_hold ? c.admin.linked : c.admin.unlinked}</>}
         </p>
       </dl>
+      {item.evidence && (
+        <figure className="report-card__evidence">
+          <figcaption className="muted small">{c.admin.evidence}</figcaption>
+          <blockquote className="report__quote">
+            <bdi>{item.evidence}</bdi>
+          </blockquote>
+        </figure>
+      )}
       {item.details && (
         <blockquote className="report-card__details">
           <bdi>{item.details}</bdi>

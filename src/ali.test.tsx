@@ -36,6 +36,11 @@ const api = vi.hoisted(() => ({
   openSheet: vi.fn(),
   startScore: vi.fn(),
   getSheet: vi.fn(),
+  myDiwaniyas: vi.fn(),
+  followerCount: vi.fn(),
+  lastNightAt: vi.fn(),
+  listRequests: vi.fn(),
+  listAnnouncements: vi.fn(),
 }));
 vi.mock('./lib/api', async (importActual) => {
   const real = await importActual<typeof import('./lib/api')>();
@@ -48,8 +53,8 @@ const { filterNights, sitTarget, Tonight } = await import('./screens/Tonight');
 const { League } = await import('./screens/League');
 const { Inbox } = await import('./screens/Inbox');
 const { Me } = await import('./screens/Me');
-const { Settings } = await import('./screens/Settings');
-const { ME_SECTIONS, SETTINGS_SECTIONS } = await import('./lib/router');
+const { Board } = await import('./screens/Board');
+const { ME_SECTIONS, parseHash } = await import('./lib/router');
 
 const ME = '11111111-1111-4111-8111-111111111111';
 const HOST = '33333333-3333-4333-8333-333333333333';
@@ -195,7 +200,7 @@ describe('(3) a scored game reaches the league', () => {
     expect(within(row).queryByRole('link')).toBeNull();
     expect(within(row).getByText(en.mine.walkIn)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Ali' }).getAttribute('href')).toBe(`#/player/${ME}`);
-    expect(screen.getByRole('link', { name: STRINGS.en.league.score }).getAttribute('href')).toBe(`#/score/${DW}`);
+    expect(screen.queryByRole('link', { name: STRINGS.en.league.score })).toBeNull(); // Score is only the middle tab now (ADC-LOG-781 item 3)
   });
 });
 
@@ -234,18 +239,22 @@ describe('(5) the map', () => {
     expect(csp.match(/tile\.openstreetmap\.org/g)).toHaveLength(1);
     expect(headers).toMatch(/geolocation=\(self\)/);
   });
-  it('S9 has no latitude or longitude boxes: a map, my-location and the directions', async () => {
-    api.getDiwaniya.mockResolvedValue({ id: DW, name: 'D', area: 'السالمية', usual_slot: '', host_id: ME, visibility: 'public', about: '', rules: '', approval: 'host', guest_cap: 4, pin_unlock_minutes: 60 });
+  it('the Diwaniya page has no latitude or longitude boxes: tap Address for the map, my-location and the directions', async () => {
+    api.myDiwaniyas.mockResolvedValue([{ id: DW, name: 'D', area: 'السالمية', usual_slot: '', host_id: ME, visibility: 'public', about: '', rules: '', approval: 'host', guest_cap: 4, pin_unlock_minutes: 60, messages_on: true }]);
+    api.getOpenNight.mockResolvedValue(null);
+    api.followerCount.mockResolvedValue(0);
+    api.lastNightAt.mockResolvedValue(null);
     api.getPin.mockResolvedValue({ lat: 29.3375, lng: 47.98, directions: 'Gate 2', address: '' });
     api.listRegulars.mockResolvedValue([]);
     api.listCohosts.mockResolvedValue([]);
-    const { container } = withAll(<Settings id={DW} section="location" />);
+    const { container } = withAll(<Board />);
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${en.page.edit(en.settings.address)}`) }));
     expect(await screen.findByRole('button', { name: en.map.useMine })).toBeTruthy();
     expect(screen.queryByLabelText(/latitude|longitude/i)).toBeNull();
     const imgs = [...container.querySelectorAll('img.map__tile')];
     expect(imgs.length).toBeGreaterThan(0);
     expect(imgs.every((i) => i.getAttribute('referrerpolicy') === 'strict-origin-when-cross-origin')).toBe(true);
-    expect(screen.getByRole('link', { name: en.map.osm }).getAttribute('href')).toBe('https://www.openstreetmap.org/copyright');
+    expect(screen.getAllByRole('link', { name: en.map.osm })[0].getAttribute('href')).toBe('https://www.openstreetmap.org/copyright');
   });
 });
 
@@ -285,19 +294,9 @@ describe('(2) Me and S9: a menu of buttons, one page per section (ADC-LOG-764 it
     expect(screen.getByRole('button', { name: en.common.back })).toBeTruthy();
     expect(container.querySelectorAll('form')).toHaveLength(0);
   });
-  it('S9 is a menu of its five sections in order, each its own page', async () => {
-    api.getDiwaniya.mockResolvedValue({ id: DW, name: 'D', area: 'السالمية', usual_slot: '', host_id: ME, visibility: 'public', about: '', rules: '', approval: 'host', guest_cap: 4, pin_unlock_minutes: 60 });
-    api.getPin.mockResolvedValue(null);
-    api.listRegulars.mockResolvedValue([]);
-    api.listCohosts.mockResolvedValue([]);
-    withAll(<Settings id={DW} />);
-    await screen.findByText('D');
-    expect(screen.getAllByRole('link').map((l) => l.getAttribute('href'))).toEqual(SETTINGS_SECTIONS.map((x) => `#/settings/${DW}/${x}`));
-    cleanup();
-    const { container } = withAll(<Settings id={DW} section="joining" />);
-    await screen.findByText(en.settings.visibility);
-    expect(container.querySelectorAll('.settings__section')).toHaveLength(1);
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(en.settings.joining);
+  it('the old S9 settings pages are retired into the one Diwaniya page (Ali\'s change list 3, item 4)', async () => {
+    expect(parseHash(`#/settings/${DW}`)).toEqual({ name: 'diwaniya', id: DW });
+    expect(parseHash(`#/settings/${DW}/joining`)).toEqual({ name: 'diwaniya', id: DW });
   });
 });
 

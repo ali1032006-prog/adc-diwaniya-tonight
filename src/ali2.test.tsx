@@ -51,7 +51,6 @@ vi.mock('./lib/api', async (importActual) => {
 const { ApiError, sheetTotals } = await import('./lib/api');
 const { Score, leader } = await import('./screens/Score');
 const { Guides } = await import('./screens/Guides');
-const { Settings } = await import('./screens/Settings');
 const { Place } = await import('./screens/Place');
 const { Board } = await import('./screens/Board');
 const { League } = await import('./screens/League');
@@ -244,18 +243,22 @@ describe('(4) game guides', () => {
 
 describe('(2) the address goes with the pin', () => {
   const dw = { id: DW, name: 'D', area: 'السالمية', usual_slot: '', host_id: ME, visibility: 'public', about: '', rules: '', approval: 'host', guest_cap: 4, pin_unlock_minutes: 60, host: { display_name: 'Ali' } };
-  it('the host writes it in S9 Location and it is saved with the pin', async () => {
-    api.getDiwaniya.mockResolvedValue(dw);
+  it('the host writes it on the Diwaniya page (tap Address) and it is saved with the pin', async () => {
+    api.myDiwaniyas.mockResolvedValue([{ ...dw, messages_on: true }]);
+    api.getOpenNight.mockResolvedValue(null);
+    api.lastNightAt.mockResolvedValue(null);
+    api.followerCount.mockResolvedValue(0);
     api.getPin.mockResolvedValue({ lat: 29.3375, lng: 47.98, directions: 'Gate 2', address: '' });
     api.listRegulars.mockResolvedValue([]);
     api.listCohosts.mockResolvedValue([]);
     api.setPin.mockResolvedValue(undefined);
     api.updateDiwaniya.mockResolvedValue(undefined);
-    withAll(<Settings id={DW} section="location" />);
+    withAll(<Board />);
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${en.page.edit(en.settings.address)}`) }));
     const box = (await screen.findByLabelText(new RegExp(`^${en.settings.address}`))) as HTMLTextAreaElement;
     expect(box.maxLength).toBe(200);
     fireEvent.change(box, { target: { value: ' Khairan, Block 3\nHouse 7 ' } });
-    fireEvent.click(screen.getByRole('button', { name: en.settings.saveLocation }));
+    fireEvent.click(screen.getByRole('button', { name: en.common.save }));
     await waitFor(() => expect(api.setPin).toHaveBeenCalledWith(DW, 29.3375, 47.98, 'Gate 2', 'Khairan, Block 3 House 7'));
   });
   it('approved guests see the address with the map; the database reads it with the pin', async () => {
@@ -300,14 +303,14 @@ describe('(6) the name is Diwaniyatna everywhere users see it', () => {
 });
 
 describe('(1) one clear place for each action', () => {
-  it('Board: no second Score in the header and no followed list (League has My diwaniyas)', async () => {
+  it('Board: no Score link at all (the Score tab) and no followed list (League has My diwaniyas)', async () => {
     api.myDiwaniyas.mockResolvedValue([{ id: DW, name: 'D', area: 'السالمية', host_id: ME }]);
     api.getOpenNight.mockResolvedValue({ id: NIGHT, starts_at: '2026-11-18T18:00:00Z', status: 'open', diwaniya_id: DW, tables: [{ id: TB, game: 'kout', seat_count: 4, label: '', queue_mode: 'rotation', need_one: false, seats: [], queue: [] }] });
     api.listRequests.mockResolvedValue([]);
     api.listAnnouncements.mockResolvedValue([]);
     withAll(<Board />);
     await screen.findByText(en.board.addTable);
-    expect(screen.getAllByRole('link', { name: en.board.score })).toHaveLength(1); // the table's own
+    expect(screen.queryAllByRole('link', { name: en.board.score })).toHaveLength(0); // Score lives only in its tab now (ADC-LOG-781 item 3)
     expect(screen.queryByText(en.board.followed)).toBeNull();
   });
   it('League: My diwaniyas rows carry no Score and no extra Season button', async () => {

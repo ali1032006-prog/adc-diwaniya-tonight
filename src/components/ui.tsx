@@ -4,6 +4,7 @@ import { WovenBand } from './WovenBand';
 import { usePrefs } from '../lib/prefs';
 import { back } from '../lib/router';
 import { SeatRing } from './SeatRing';
+import { TopMenu } from './TopMenu';
 
 /** App bar for a pushed screen: back arrow (mirrored in RTL), title, optional trailing action. */
 export function PushBar({ title, parent, action }: { title: string; parent: string; action?: ReactNode }) {
@@ -19,6 +20,7 @@ export function PushBar({ title, parent, action }: { title: string; parent: stri
           <bdi>{title}</bdi>
         </h1>
         {action}
+        <TopMenu />
       </header>
       <WovenBand className="appbar__band" />
     </>

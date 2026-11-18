@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flag, LockSimple, MapPin, Heart, ShieldCheck, Crown, ChartBar, ArrowSquareOut } from '@phosphor-icons/react';
+import { Flag, LockSimple, MapPin, Heart, ShieldCheck, Crown, ArrowSquareOut, ChatsCircle, X } from '@phosphor-icons/react';
 import { PushBar, ErrorNote, OkNote, Sheet, Skeleton, Field } from '../components/ui';
 import { NeedsAccount, TableRing } from '../components/account';
 import { EmptyState } from '../components/EmptyState';
@@ -22,6 +22,7 @@ import {
   leaveSeat,
   openSeats,
   report,
+  reportMessage,
   requestSeat,
   setFollow,
   type NightRow,
@@ -98,7 +99,7 @@ function PlaceBody({ id }: { id: string }) {
         </p>
         <div className="place__actions">
           {manager ? (
-            <a className="btn btn--primary" href={hrefFor('diwaniya')}>
+            <a className="btn btn--primary" href={href.diwaniya(dw.id)}>
               {c.place.manage}
             </a>
           ) : (
@@ -112,6 +113,12 @@ function PlaceBody({ id }: { id: string }) {
               <Heart size={18} weight={following ? 'fill' : 'regular'} aria-hidden="true" />
               {following ? c.place.following : c.place.follow}
             </button>
+          )}
+          {!manager && dw.messages_on && (
+            <a className="btn btn--quiet" href={href.dm(dw.id)}>
+              <ChatsCircle size={18} aria-hidden="true" />
+              {c.messages.toHost}
+            </a>
           )}
         </div>
       </section>
@@ -137,8 +144,6 @@ function PlaceBody({ id }: { id: string }) {
                 seatedHere={seatedAt?.id === tb.id}
                 seatedElsewhere={!!seatedAt && seatedAt.id !== tb.id}
                 member={!!approved || manager}
-                // Hosts score from their board (one place each, ADC-LOG-764 item 1); guests checked in score here.
-                scoreHref={!manager && (seatedAt || active?.status === 'arrived') ? href.score(dw.id, tb.id) : null}
                 busy={act.busy}
                 onSit={(n) => doAct(() => checkIn(tb.id, n))}
                 onLeave={() => doAct(() => leaveSeat(tb.id))}
@@ -230,7 +235,6 @@ function TableBlock(p: {
   onLeave: () => void;
   onQueue: (on: boolean) => void;
   /** Managers and guests checked in tonight score this table (ADC-LOG-754 item 4). */
-  scoreHref: string | null;
 }) {
   const { c, fmt } = usePrefs();
   const tb = p.table;
@@ -241,7 +245,8 @@ function TableBlock(p: {
       <TableRing table={tb} size={112} />
       <div className="table-block__side">
         {p.seatedHere ? (
-          <button type="button" className="btn btn--quiet btn--small" disabled={p.busy} onClick={p.onLeave}>
+          <button type="button" className="btn btn--danger btn--small" disabled={p.busy} onClick={p.onLeave}>
+            <X size={16} aria-hidden="true" />
             {c.place.leaveSeat}
           </button>
         ) : (
@@ -256,12 +261,6 @@ function TableBlock(p: {
               ))}
             </div>
           )
-        )}
-        {p.scoreHref && (
-          <a className="btn btn--quiet btn--small" href={p.scoreHref}>
-            <ChartBar size={18} aria-hidden="true" />
-            {c.quick.scoreTable}
-          </a>
         )}
         <div className="queue">
           <p className="queue__title">
@@ -281,7 +280,8 @@ function TableBlock(p: {
             <p className="muted small">{c.place.queueEmpty}</p>
           )}
           {p.member && !p.seatedHere && openSeats(tb) === 0 && (
-            <button type="button" className="btn btn--quiet btn--small" disabled={p.busy} onClick={() => p.onQueue(!queued)}>
+            <button type="button" className={queued ? "btn btn--danger btn--small" : "btn btn--quiet btn--small"} disabled={p.busy} onClick={() => p.onQueue(!queued)}>
+              {queued && <X size={16} aria-hidden="true" />}
               {queued ? c.place.leaveQueue : c.place.joinQueue}
             </button>
           )}
@@ -307,7 +307,8 @@ function MyRequestCard({ night, request, busy, onCancel }: { night: NightRow; re
         {table && <span className="muted">{t.games[table.game]}</span>}
       </p>
       {(request.status === 'pending' || request.status === 'approved') && (
-        <button type="button" className="btn btn--quiet btn--small" disabled={busy} onClick={onCancel}>
+        <button type="button" className="btn btn--danger btn--small" disabled={busy} onClick={onCancel}>
+          <X size={16} aria-hidden="true" />
           {c.place.cancelRequest}
         </button>
       )}
@@ -417,24 +418,43 @@ export function RequestSheet({ night, onClose, onSent }: { night: NightRow; onCl
 
 const REASONS: ReportReason[] = ['safety', 'harassment', 'no_show', 'fake', 'other'];
 
-export function ReportSheet({ target, onClose, onSent }: { target: { user?: string; diwaniya?: string }; onClose: () => void; onSent: () => void }) {
+export function ReportSheet({
+  target,
+  onClose,
+  onSent,
+  title,
+  quote,
+}: {
+  target: { user?: string; diwaniya?: string; message?: string };
+  onClose: () => void;
+  onSent: () => void;
+  title?: string;
+  /** The reported words, shown back so the reporter knows what he is sending. */
+  quote?: string;
+}) {
   const { c, err } = usePrefs();
   const act = useAction();
-  const [reason, setReason] = useState<ReportReason>('safety');
+  const [reason, setReason] = useState<ReportReason>(target.message ? 'harassment' : 'safety');
   const [details, setDetails] = useState('');
   return (
-    <Sheet title={c.report.title} onClose={onClose}>
+    <Sheet title={title ?? c.report.title} onClose={onClose}>
       <form
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
           void act.run(async () => {
-            await report(target, reason, details);
+            if (target.message) await reportMessage(target.message, reason, details);
+            else await report(target, reason, details);
             onSent();
             onClose();
           });
         }}
       >
+        {quote && (
+          <blockquote className="report__quote">
+            <bdi>{quote}</bdi>
+          </blockquote>
+        )}
         <Field label={c.report.reason}>
           <select className="input" value={reason} onChange={(e) => setReason(e.target.value as ReportReason)}>
             {REASONS.map((r) => (

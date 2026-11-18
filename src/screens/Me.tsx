@@ -13,6 +13,7 @@ import {
   IdentificationCard,
   LockKey,
   Database,
+  X,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
@@ -548,7 +549,8 @@ function CohostInvites() {
               <button type="button" className="btn btn--primary btn--small" disabled={act.busy} onClick={() => answer(() => acceptCohost(i.diwaniya_id))}>
                 {c.me.accept}
               </button>
-              <button type="button" className="btn btn--quiet btn--small" disabled={act.busy} onClick={() => answer(() => declineCohost(i.diwaniya_id))}>
+              <button type="button" className="btn btn--danger btn--small" disabled={act.busy} onClick={() => answer(() => declineCohost(i.diwaniya_id))}>
+                <X size={16} aria-hidden="true" />
                 {c.me.decline}
               </button>
             </span>
