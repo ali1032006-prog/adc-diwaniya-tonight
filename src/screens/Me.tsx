@@ -84,9 +84,6 @@ function Segmented<T extends string>({
 
 const prefsDir = () => (typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr');
 
-// The account's saved display preferences are applied once per signed-in person on this device.
-let appliedFor: string | null = null;
-
 /**
  * S14 Me (Ali, ADC-LOG-764 item 7): a menu of buttons, one per section; each opens its own page and
  * back returns to the menu. Sign out sits at the foot of the menu, the danger zone is its own page.
@@ -147,17 +144,12 @@ function sectionSub(s: MeSection, c: C): string {
 }
 
 function MeMenu() {
-  const { t, c, prefs, setPrefs } = usePrefs();
+  const { t, c, prefs } = usePrefs();
   const s = useSession();
   const admin = useAsync(amIAdmin, []);
   const profile = s.profile!;
-  const priv = s.priv!;
-  // The account's saved display preferences are applied once per signed-in person on this device.
-  useEffect(() => {
-    if (appliedFor === profile.id) return;
-    appliedFor = profile.id;
-    setPrefs({ lang: priv.lang, numerals: priv.numerals, theme: priv.theme });
-  }, [profile.id, priv.lang, priv.numerals, priv.theme, setPrefs]);
+  // No preference is applied here (ADC-LOG-794 item 2): the language chosen on this device wins,
+  // and PrefsSync in App saves it to the account.
   return (
     <>
       <div className="account account--menu">
@@ -211,13 +203,8 @@ function MeSectionPage({ section }: { section: MeSection }) {
 /** Preferences section: language, numerals and theme. */
 function QuickPrefs() {
   const { t, prefs, setPrefs, fmt } = usePrefs();
-  const session = useSession();
-  const ready = session.status === 'ready';
-  const setPref = (p: Partial<{ lang: Lang; numerals: Numerals; theme: Theme }>) => {
-    setPrefs(p);
-    // Signed in, display preferences follow the account so they travel between devices.
-    if (ready) void updatePrivate(p).catch(() => {});
-  };
+  // Saved to the account by PrefsSync (App), once, wherever the switch was made.
+  const setPref = (p: Partial<{ lang: Lang; numerals: Numerals; theme: Theme }>) => setPrefs(p);
   return (
     <section className="panel quick-prefs" aria-label={t.me.preferences}>
       <div className="quick-prefs__grid">

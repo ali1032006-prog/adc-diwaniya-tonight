@@ -106,14 +106,14 @@ describe('router (slice 3 routes)', () => {
 });
 
 describe('pure helpers', () => {
-  it('counts open seats and filters nights by game and open seats', () => {
+  it('counts open seats and filters nights by game (the open-seats option left with ADC-LOG-794 item 4)', () => {
     const full = table({ id: 'full', game: 'baloot', seat_count: 4, seats: [1, 2, 3, 4].map((n) => ({ seat_no: n, user_id: null, walk_in_name: 'x' })) });
     expect(openSeats(full)).toBe(0);
     const a = night({ id: 'a', tables: [full] });
     const b = night({ id: 'b', tables: [table()] });
-    expect(filterNights([a, b], [], true).map((n) => n.id)).toEqual(['b']);
-    expect(filterNights([a, b], ['baloot'], false).map((n) => n.id)).toEqual(['a']);
-    expect(filterNights([a, b], ['trix'], false)).toEqual([]);
+    expect(filterNights([a, b], []).map((n) => n.id)).toEqual(['a', 'b']);
+    expect(filterNights([a, b], ['baloot']).map((n) => n.id)).toEqual(['a']);
+    expect(filterNights([a, b], ['trix'])).toEqual([]);
   });
   it('builds ring seats in seat order with mine marked', () => {
     const t = table({ seat_count: 4, game: 'baloot', seats: [{ seat_no: 3, user_id: ME, walk_in_name: null, profile: { display_name: 'Faisal Ali' } }] });

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Crown, Trash, ArrowCounterClockwise, ArrowsClockwise, BookOpenText, Plus, Trophy } from '@phosphor-icons/react';
+import { Crown, Trash, ArrowCounterClockwise, ArrowsClockwise, BookOpenText, Plus, Trophy, UserCheck, X } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
 import { EmptyState } from '../components/EmptyState';
 import { DallahArt } from '../components/Art';
-import { ErrorNote, OkNote, Field, Skeleton } from '../components/ui';
+import { Chips, ErrorNote, OkNote, Skeleton } from '../components/ui';
 import { NeedsAccount } from '../components/account';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
@@ -37,8 +37,6 @@ export interface Player {
   user_id: string | null;
   name: string;
 }
-
-const WALK_IN = '__walk_in__';
 
 /** Seats per rule pack. */
 export function playersFor(pack: RulePack): number {
@@ -138,15 +136,16 @@ function ScoreNow() {
     <>
       <div className="score-now">
         {list.length > 1 ? (
-          <Field label={c.scoreTab.others}>
-            <select className="input" value={keyOf(cur)} onChange={(e) => setPick(e.target.value)}>
-              {list.map((x) => (
-                <option key={keyOf(x)} value={keyOf(x)}>
-                  {`${c.scoreTab.lead(x.name, tableName(x))} · ${c.scoreTab.why[x.why]}`}
-                </option>
-              ))}
-            </select>
-          </Field>
+          // No dropdowns on this page (ADC-LOG-794 item 1): the tables to score are chips.
+          <div className="score-pick">
+            <p className="score-pick__label">{c.scoreTab.others}</p>
+            <Chips<string>
+              legend={c.scoreTab.others}
+              value={[keyOf(cur)]}
+              options={list.map((x) => ({ value: keyOf(x), label: `${c.scoreTab.lead(x.name, tableName(x))} · ${c.scoreTab.why[x.why]}` }))}
+              onChange={(v) => setPick(v[0] ?? '')}
+            />
+          </div>
         ) : (
           <p className="score-now__lead">
             <bdi>{c.scoreTab.lead(cur.name, tableName(cur))}</bdi>
@@ -237,14 +236,27 @@ function SetupSheet({ id, tableId, onStarted, onTaken }: { id: string; tableId?:
       return;
     }
     const me = people.find((p) => p.id === userId);
-    if (!tableId && me) setPlayers((ps) => (ps.some((p) => p.user_id || p.name) ? ps : ps.map((p, i) => (i === 0 ? { user_id: me.id, name: me.name } : p))));
+    // Seat 1 is me unless someone is already typed there or I sit elsewhere (the room loads late).
+    if (!tableId && me) setPlayers((ps) => (ps[0].name.trim() || ps.some((p) => p.user_id === me.id) ? ps : ps.map((p, i) => (i === 0 ? { user_id: me.id, name: me.name } : p))));
   }, [tb?.id, roster.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const n = playersFor(pack);
   const teams = pack === 'trix' ? 4 : 2;
   const seated = players.slice(0, n);
-  const dups = duplicateSeats(seated);
-  const setSeat = (s: number, p: Player) => setPlayers(players.map((x, i) => (i === s - 1 ? p : x)));
+  const setSeat = (s: number, p: Player) => setPlayers((ps) => ps.map((x, i) => (i === s - 1 ? p : x)));
+  // The seat a tapped name goes to: the one being typed in, else the first empty one.
+  const [active, setActive] = useState<number | null>(null);
+  const linked = linkToRoster(seated, people);
+  // A typed name that is someone already seated is the same person twice (ali = Ali).
+  const dups = duplicateSeats(linked);
+  const inRoom = people.filter((r) => !linked.some((p) => p.user_id === r.id));
+  const seatPerson = (r: RosterPerson) => {
+    const empty = seated.findIndex((p) => !p.name.trim()) + 1;
+    const to = active && active <= n ? active : empty;
+    if (!to) return;
+    setSeat(to, { user_id: r.id, name: r.name });
+    setActive(null);
+  };
 
   if (blocked) return <ErrorNote text={c.roster.notAllowed} />;
 
@@ -274,15 +286,10 @@ function SetupSheet({ id, tableId, onStarted, onTaken }: { id: string; tableId?:
     >
       {tb && <p className="muted small">{c.roster.forTable(tb.label || c.roster.thisTable)}</p>}
       <div className="score__head">
-        <Field label={c.score.pack}>
-          <select className="input" value={pack} onChange={(e) => setPack(e.target.value as RulePack)}>
-            {RULE_PACKS.map((p) => (
-              <option key={p} value={p}>
-                {c.score.packs[p]}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <div className="score-pick">
+          <p className="score-pick__label">{c.score.pack}</p>
+          <Chips<RulePack> legend={c.score.pack} value={[pack]} options={RULE_PACKS.map((p) => ({ value: p, label: c.score.packs[p] }))} onChange={(v) => v[0] && setPack(v[0])} />
+        </div>
         <GuideLink pack={pack} />
       </div>
       <h2 className="section-title">{c.score.whoPlays}</h2>
@@ -294,12 +301,36 @@ function SetupSheet({ id, tableId, onStarted, onTaken }: { id: string; tableId?:
             <fieldset key={team} className="team">
               <legend className="team__name">{pack === 'trix' ? c.score.player(team, fmt) : c.score.team(team, fmt)}</legend>
               {seats.map((s) => (
-                <SeatPick key={s} seat={s} value={players[s - 1]} roster={people} dup={dups.includes(s)} onChange={(p) => setSeat(s, p)} />
+                <SeatPick
+                  key={s}
+                  seat={s}
+                  value={players[s - 1]}
+                  linked={!!linked[s - 1]?.user_id}
+                  dup={dups.includes(s)}
+                  onFocus={() => setActive(s)}
+                  onChange={(p) => setSeat(s, p)}
+                />
               ))}
             </fieldset>
           );
         })}
       </div>
+      {inRoom.length > 0 && (
+        <div className="room" role="group" aria-label={c.roster.room}>
+          <p className="room__title">{c.roster.room}</p>
+          <p className="muted small">{c.roster.roomHint}</p>
+          <ul className="room__list">
+            {inRoom.map((r) => (
+              <li key={r.id}>
+                <button type="button" className="chip chip--person" aria-label={c.roster.add(r.name)} onMouseDown={(e) => e.preventDefault()} onClick={() => seatPerson(r)}>
+                  <Plus size={14} aria-hidden="true" />
+                  <bdi>{r.name}</bdi>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <p className="muted small">{c.score.live}</p>
       {act.error != null && <ErrorNote text={err(act.error)} />}
       {note && <ErrorNote text={note} />}
@@ -577,43 +608,37 @@ function Scoreboard({ totals, lead, label, names, teams }: { totals: number[]; l
   );
 }
 
-/** One seat: pick a person who is here (linked account) or type a walk-in's name. */
-function SeatPick({ seat, value, roster, dup, onChange }: { seat: number; value: Player; roster: RosterPerson[]; dup: boolean; onChange: (p: Player) => void }) {
+/**
+ * One seat (ADC-LOG-794 item 1): a name box. People at the table come in already; anyone else is
+ * typed, or tapped from the room below. A name that matches someone in the room links to his account.
+ */
+function SeatPick({ seat, value, linked, dup, onFocus, onChange }: { seat: number; value: Player; linked: boolean; dup: boolean; onFocus: () => void; onChange: (p: Player) => void }) {
   const { c, fmt } = usePrefs();
-  const known = value.user_id && !roster.some((r) => r.id === value.user_id) ? [{ id: value.user_id, name: value.name, seat: null }] : [];
-  const options = [...roster, ...known];
-  const sel = value.user_id ?? WALK_IN;
   return (
     <div className={dup ? 'seat-pick-field seat-pick-field--dup' : 'seat-pick-field'}>
-      <select
-        className="input"
-        aria-label={c.score.player(seat, fmt)}
-        aria-invalid={dup || undefined}
-        value={sel}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (v === WALK_IN) onChange({ user_id: null, name: '' });
-          else onChange({ user_id: v, name: options.find((o) => o.id === v)?.name ?? '' });
-        }}
-      >
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-            {o.seat ? ` · ${c.roster.seat(fmt(o.seat))}` : ''}
-          </option>
-        ))}
-        <option value={WALK_IN}>{c.roster.walkIn}</option>
-      </select>
-      {sel === WALK_IN && (
+      <div className="seat-name">
         <input
-          className="input"
-          aria-label={c.roster.walkInName(fmt(seat))}
-          placeholder={c.roster.walkInName(fmt(seat))}
+          className="input seat-name__input"
+          aria-label={c.score.player(seat, fmt)}
+          aria-invalid={dup || undefined}
+          placeholder={c.roster.typeName}
           maxLength={40}
           value={value.name}
+          onFocus={onFocus}
           onChange={(e) => onChange({ user_id: null, name: e.target.value })}
         />
-      )}
+        {linked && (
+          <span className="seat-name__linked" title={c.roster.linked}>
+            <UserCheck size={18} aria-hidden="true" />
+            <span className="visually-hidden">{c.roster.linked}</span>
+          </span>
+        )}
+        {value.name && (
+          <button type="button" className="seat-name__clear" aria-label={c.roster.clear(fmt(seat))} onClick={() => onChange({ user_id: null, name: '' })}>
+            <X size={16} aria-hidden="true" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

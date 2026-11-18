@@ -327,12 +327,12 @@ describe('(3) Score is the middle tab and picks up the table he can score now', 
 
 // ------------------------------------------------------------------ (4) one-page Diwaniya tab
 describe('(4) the Diwaniya tab shows everything on one page, tap any item to edit it', () => {
-  it('has all seven parts in order', async () => {
+  it('has all its parts in order (Settings inside Tonight and Location last since ADC-LOG-794 item 3)', async () => {
     hostPage();
     withAll(<Board />);
     await screen.findByText(en.board.addTable);
     const parts = [...document.querySelectorAll('.dw-part__title')].map((h) => h.textContent);
-    expect(parts).toEqual([en.page.tonight, en.page.requests, en.page.tables, en.page.people, en.page.location, en.page.rules, en.page.settings]);
+    expect(parts).toEqual([en.page.tonight, en.page.requests, en.page.tables, en.page.people, en.page.rules, en.page.location]);
     // the facts show on the page itself, not behind a menu
     for (const v of ['Kout nights since 1990', 'No stakes', 'Block 3', 'Gate 2', 'Thursday 9pm', 'Bu Fahad']) expect(screen.getAllByText(v).length).toBeGreaterThan(0);
   });
@@ -352,11 +352,10 @@ describe('(4) the Diwaniya tab shows everything on one page, tap any item to edi
     fireEvent.click(screen.getByRole('button', { name: en.common.save }));
     await waitFor(() => expect(api.updateDiwaniya).toHaveBeenCalledWith(DW, { rules: 'Respect first' }));
   });
-  it('the host turns messages off from the Settings part', async () => {
+  it('the host turns messages off from the settings at the top of Tonight', async () => {
     hostPage();
     withAll(<Board />);
-    fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${en.page.edit(en.messages.setting)}`) }));
-    fireEvent.change(screen.getByLabelText(en.messages.setting), { target: { value: 'off' } });
+    fireEvent.change(await screen.findByLabelText(en.messages.setting), { target: { value: 'off' } });
     fireEvent.click(screen.getByRole('button', { name: en.common.save }));
     await waitFor(() => expect(api.updateDiwaniya).toHaveBeenCalledWith(DW, { messages_on: false }));
   });

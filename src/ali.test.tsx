@@ -123,11 +123,11 @@ describe('(1) areas: Kuwait governorates and areas', () => {
     expect(governorateOf('الفنطاس')).toBe('ahmadi');
     expect(areaLabel('Somewhere old', 'en')).toBe('Somewhere old');
   });
-  it('filters Tonight to my area or my governorate', () => {
+  it('filters Tonight to an area or a governorate (any, since ADC-LOG-794 item 4)', () => {
     const list = [night('السالمية', { id: 'a' }), night('الجابرية', { id: 'b' }), night('الجهراء', { id: 'c' })];
-    expect(filterNights(list, [], false, 'area', 'Salmiya').map((n) => n.id)).toEqual(['a']);
-    expect(filterNights(list, [], false, 'gov', 'السالمية').map((n) => n.id)).toEqual(['a', 'b']);
-    expect(filterNights(list, [], false, 'all', 'السالمية').map((n) => n.id)).toEqual(['a', 'b', 'c']);
+    expect(filterNights(list, [], 'area:Salmiya').map((n) => n.id)).toEqual(['a']);
+    expect(filterNights(list, [], 'gov:hawalli').map((n) => n.id)).toEqual(['a', 'b']);
+    expect(filterNights(list, [], 'all').map((n) => n.id)).toEqual(['a', 'b', 'c']);
   });
   it('S3 and Me pick the area from a grouped dropdown, not a text box', async () => {
     api.listBlocked.mockResolvedValue([]);
@@ -171,13 +171,12 @@ describe('(3) a scored game reaches the league', () => {
     api.startScore.mockResolvedValue('s1');
     api.getSheet.mockResolvedValue({ sheet: null, rounds: [] });
     withAll(<Score id={DW} />);
-    const seat1 = (await screen.findByLabelText('Player 1')) as HTMLSelectElement;
-    await waitFor(() => expect(seat1.value).toBe(ME));
-    fireEvent.change(screen.getByLabelText('Player 2'), { target: { value: HOST } });
-    for (const n of [3, 4, 5, 6]) {
-      fireEvent.change(screen.getByLabelText(`Player ${n}`), { target: { value: '__walk_in__' } });
-      fireEvent.change(screen.getByLabelText(en.roster.walkInName(String(n))), { target: { value: `Guest ${n}` } });
-    }
+    const seat1 = (await screen.findByLabelText('Player 1')) as HTMLInputElement;
+    await waitFor(() => expect(seat1.value).toBe('Ali'));
+    // ADC-LOG-794 item 1: people come in by a tap on their name, others are typed
+    fireEvent.focus(screen.getByLabelText('Player 2'));
+    fireEvent.click(screen.getByRole('button', { name: en.roster.add(roster.find((r) => r.id === HOST)!.name) }));
+    for (const n of [3, 4, 5, 6]) fireEvent.change(screen.getByLabelText(`Player ${n}`), { target: { value: `Guest ${n}` } });
     // Live scoring (ADC-LOG-764 item 3): the seats go to the score sheet when the game starts.
     fireEvent.click(screen.getByRole('button', { name: en.score.start }));
     await waitFor(() => expect(api.startScore).toHaveBeenCalled());

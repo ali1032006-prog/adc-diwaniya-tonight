@@ -187,10 +187,7 @@ describe('(3) live scoring', () => {
     api.startScore.mockRejectedValue(new ApiError('23505', 'a game is already being scored here'));
     withAll(<Score id={DW} />);
     await screen.findByRole('button', { name: en.score.start });
-    for (const n of [2, 3, 4, 5, 6]) {
-      fireEvent.change(screen.getByLabelText(`Player ${n}`), { target: { value: '__walk_in__' } });
-      fireEvent.change(screen.getByLabelText(en.roster.walkInName(String(n))), { target: { value: `Guest ${n}` } });
-    }
+    for (const n of [2, 3, 4, 5, 6]) fireEvent.change(screen.getByLabelText(`Player ${n}`), { target: { value: `Guest ${n}` } });
     fireEvent.click(screen.getByRole('button', { name: en.score.start }));
     expect(await screen.findByText(en.score.taken)).toBeTruthy();
   });

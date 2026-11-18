@@ -3939,3 +3939,225 @@ html,
 .dw-part .requests .request:last-child {
   border-bottom: 0;
 }
+
+/* Ali's change list 4 (ADC-LOG-794) ------------------------------------------------------------ */
+/* (1) Score: chips instead of dropdowns, name boxes, and the room of people to tap. */
+.score-pick {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.score-pick__label,
+.room__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+.score-pick .chip span {
+  white-space: normal;
+  padding-block: 8px;
+}
+.seat-name {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.seat-name__input {
+  padding-inline-end: 80px;
+}
+.seat-name__linked {
+  position: absolute;
+  inset-inline-end: 48px;
+  display: inline-flex;
+  color: var(--saffron);
+  pointer-events: none;
+}
+.seat-name__clear {
+  position: absolute;
+  inset-inline-end: 2px;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.seat-name__clear:hover {
+  color: var(--ink);
+}
+.seat-name__clear:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: -2px;
+}
+.room {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  border: 1px dashed var(--hairline);
+}
+.room p {
+  margin: 0;
+}
+.room__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip--person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 14px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--hairline);
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: transform 150ms var(--ease-standard), border-color 150ms var(--ease-standard);
+}
+.chip--person bdi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip--person:hover {
+  border-color: var(--saffron);
+}
+.chip--person:active {
+  transform: scale(0.96);
+}
+.chip--person:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip--person {
+    transition: none;
+  }
+  .chip--person:active {
+    transform: none;
+  }
+}
+
+/* (3) Diwaniya page: settings at the top of Tonight, dropdowns on the page, one Save at the bottom. */
+.dw-settings {
+  padding-bottom: 8px;
+}
+.dw-night {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hairline);
+}
+.dw-field {
+  display: grid;
+  grid-template-columns: minmax(7rem, 38%) minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 56px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--hairline);
+}
+.dw-field__label {
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}
+.dw-field .input {
+  min-width: 0;
+}
+.dw-field--changed .input {
+  border-color: var(--saffron);
+}
+.edit-row__end {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.edit-row__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--saffron);
+}
+.dw-save {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  transition: border-color 200ms var(--ease-standard), transform 200ms var(--ease-standard);
+}
+.dw-save--dirty {
+  position: sticky;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px);
+  z-index: 2;
+  border-color: var(--saffron);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.dw-save__state {
+  margin: 0;
+}
+.dw-save__acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dw-save__acts .btn--primary {
+  min-width: 9rem;
+}
+@media (max-width: 359px) {
+  .dw-field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dw-save__acts > * {
+    flex: 1 1 auto;
+  }
+}
+@media (min-width: 1024px) {
+  .dw-save {
+    grid-column: 1 / -1;
+  }
+}
+@media (orientation: landscape) and (max-height: 499px) {
+  .dw-save--dirty {
+    position: static;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dw-save {
+    transition: none;
+  }
+}
+
+/* (4) Tonight: the Location dropdown sits in the filter row. */
+.filters .field {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filters .field__label {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+.input--where {
+  width: auto;
+  min-width: 11rem;
+  max-width: 16rem;
+  min-height: 44px;
+  padding-block: 6px;
+}

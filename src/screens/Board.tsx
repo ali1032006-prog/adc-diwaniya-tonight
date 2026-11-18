@@ -18,7 +18,8 @@ import {
   UsersThree,
   MapPin,
   Article,
-  GearSix,
+  Check,
+  FloppyDisk,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { Screen } from './Tabs';
@@ -161,7 +162,7 @@ function CreateDiwaniya({ onCreated }: { onCreated: (id: string) => void }) {
   );
 }
 
-// ---------------------------------------------------------------- tap-to-edit building blocks
+// ---------------------------------------------------------------- the page's building blocks
 
 /** A labelled section of the one page, with its icon. */
 function Part({ id, icon: I, title, children, live, wide }: { id: string; icon: Icon; title: string; children: ReactNode; live?: boolean; wide?: boolean }) {
@@ -177,13 +178,31 @@ function Part({ id, icon: I, title, children, live, wide }: { id: string; icon: 
 }
 
 /**
- * One fact about the diwaniya. Tapping it opens its editor in place (Save, or red Cancel); people
- * who can't change it (a co-host) see the same row without the pencil.
+ * One typed fact about the diwaniya. Tapping it opens its box in place; what is typed waits for
+ * the page's one Save at the bottom (ADC-LOG-794 item 3). Done keeps it, red Cancel (or Esc) puts
+ * the field back. People who can't change it (a co-host) see the same row without the pencil.
  */
-export function EditRow({ label, value, editable, editor }: { label: string; value: ReactNode; editable: boolean; editor: (close: () => void) => ReactNode }) {
+export function EditRow({
+  label,
+  value,
+  editable,
+  changed,
+  editor,
+  onOpen,
+  onCancel,
+}: {
+  label: string;
+  value: ReactNode;
+  editable: boolean;
+  changed?: boolean;
+  editor: () => ReactNode;
+  /** Called as the box opens, so Cancel knows what to put back. */
+  onOpen: () => void;
+  onCancel: () => void;
+}) {
   const { c } = usePrefs();
   const [open, setOpen] = useState(false);
-  // Keyboard users land back on the row they edited (Save, Cancel or Esc), not on the page.
+  // Keyboard users land back on the row they edited (Done, Cancel or Esc), not on the page.
   const row = useRef<HTMLButtonElement>(null);
   const refocus = useRef(false);
   useEffect(() => {
@@ -192,11 +211,37 @@ export function EditRow({ label, value, editable, editor }: { label: string; val
       row.current?.focus();
     }
   }, [open]);
-  const close = () => {
+  const close = (cancel: boolean) => {
+    if (cancel) onCancel();
     refocus.current = true;
     setOpen(false);
   };
-  if (open && editable) return <div className="edit-row edit-row--open">{editor(close)}</div>;
+  if (open && editable) {
+    return (
+      <div
+        className="edit-row edit-row--open"
+        role="group"
+        aria-label={c.page.edit(label)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            close(true);
+          }
+        }}
+      >
+        <div className="editor">
+          {editor()}
+          <div className="editor__acts">
+            <button type="button" className="btn btn--quiet btn--small" onClick={() => close(false)}>
+              <Check size={16} aria-hidden="true" />
+              {c.page.done}
+            </button>
+            <CancelButton onClick={() => close(true)} />
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!editable) {
     return (
       <div className="edit-row edit-row--static">
@@ -206,45 +251,23 @@ export function EditRow({ label, value, editable, editor }: { label: string; val
     );
   }
   return (
-    <button ref={row} type="button" className="edit-row" aria-label={`${c.page.edit(label)}: ${typeof value === 'string' ? value : ''}`.replace(/: $/, '')} onClick={() => setOpen(true)}>
-      <span className="edit-row__label">{label}</span>
-      <span className="edit-row__value">{value}</span>
-      <PencilSimple size={18} aria-hidden="true" className="edit-row__pencil" />
-    </button>
-  );
-}
-
-/** The editor form inside a row: its fields, Save, and a red Cancel that throws the change away. */
-function Editor({ label, onSave, close, children, saveDisabled }: { label: string; onSave: () => Promise<unknown>; close: () => void; children: ReactNode; saveDisabled?: boolean }) {
-  const { c, err } = usePrefs();
-  const act = useAction();
-  return (
-    <form
-      className="editor"
-      aria-label={c.page.edit(label)}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation();
-          close();
-        }
-      }}
-      onSubmit={(e) => {
-        e.preventDefault();
-        void act.run(async () => {
-          await onSave();
-          close();
-        });
+    <button
+      ref={row}
+      type="button"
+      className={changed ? 'edit-row edit-row--changed' : 'edit-row'}
+      aria-label={`${c.page.edit(label)}: ${typeof value === 'string' ? value : ''}${changed ? ` (${c.page.changed})` : ''}`.replace(/: $/, '')}
+      onClick={() => {
+        onOpen();
+        setOpen(true);
       }}
     >
-      {children}
-      {act.error != null && <ErrorNote text={err(act.error)} />}
-      <div className="editor__acts">
-        <button className="btn btn--primary btn--small" disabled={act.busy || saveDisabled}>
-          {c.common.save}
-        </button>
-        <CancelButton onClick={close} />
-      </div>
-    </form>
+      <span className="edit-row__label">{label}</span>
+      <span className="edit-row__value">{value}</span>
+      <span className="edit-row__end">
+        {changed && <span className="edit-row__dot" aria-hidden="true" />}
+        <PencilSimple size={18} aria-hidden="true" className="edit-row__pencil" />
+      </span>
+    </button>
   );
 }
 
@@ -259,6 +282,208 @@ export function CancelButton({ onClick, label }: { onClick: () => void; label?: 
   );
 }
 
+/**
+ * A fact chosen from a list: the dropdown itself sits on the page, no pencil (ADC-LOG-794 item 3).
+ * A co-host sees the chosen value as text.
+ */
+function SelectRow<T extends string>({ label, value, options, editable, changed, onChange }: { label: string; value: T; options: { value: T; label: string }[]; editable: boolean; changed?: boolean; onChange: (v: T) => void }) {
+  if (!editable) {
+    return (
+      <div className="edit-row edit-row--static">
+        <span className="edit-row__label">{label}</span>
+        <span className="edit-row__value">{options.find((o) => o.value === value)?.label ?? value}</span>
+      </div>
+    );
+  }
+  return (
+    <label className={changed ? 'dw-field dw-field--changed' : 'dw-field'}>
+      <span className="dw-field__label">{label}</span>
+      <select className="input" value={value} onChange={(e) => onChange(e.target.value as T)}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** The area, a grouped dropdown on the page. */
+function AreaRow({ value, editable, changed, onChange }: { value: string; editable: boolean; changed?: boolean; onChange: (v: string) => void }) {
+  const { c, prefs } = usePrefs();
+  if (!editable) {
+    return (
+      <div className="edit-row edit-row--static">
+        <span className="edit-row__label">{c.profile.area}</span>
+        <span className="edit-row__value">
+          <bdi>{areaLabel(value, prefs.lang)}</bdi>
+        </span>
+      </div>
+    );
+  }
+  return (
+    <label className={changed ? 'dw-field dw-field--changed' : 'dw-field'}>
+      <span className="dw-field__label">{c.profile.area}</span>
+      <AreaSelect required value={value} onChange={onChange} />
+    </label>
+  );
+}
+
+function TextRow({
+  label,
+  value,
+  saved,
+  editable,
+  max,
+  rows,
+  required,
+  hint,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  saved: string;
+  editable: boolean;
+  max: number;
+  rows?: number;
+  required?: boolean;
+  hint?: string;
+  onChange: (v: string) => void;
+}) {
+  const { c } = usePrefs();
+  const before = useRef(value);
+  return (
+    <EditRow
+      label={label}
+      value={value ? <bdi className={rows ? 'edit-row__long' : undefined}>{value}</bdi> : <span className="muted">{c.page.notSet}</span>}
+      editable={editable}
+      changed={value !== saved}
+      onOpen={() => (before.current = value)}
+      onCancel={() => onChange(before.current)}
+      editor={() => <TextBox label={label} value={value} max={max} rows={rows} required={required} hint={hint} onChange={onChange} />}
+    />
+  );
+}
+
+function TextBox({ label, value, max, rows, required, hint, onChange }: { label: string; value: string; max: number; rows?: number; required?: boolean; hint?: string; onChange: (v: string) => void }) {
+  return (
+    <Field label={label} hint={hint}>
+      {rows ? (
+        <textarea className="input" rows={rows} maxLength={max} value={value} autoFocus onChange={(e) => onChange(e.target.value)} />
+      ) : (
+        <input className="input" maxLength={max} required={required} value={value} autoFocus onChange={(e) => onChange(e.target.value)} />
+      )}
+    </Field>
+  );
+}
+
+function NumberRow({ label, value, saved, min, max, step, editable, suffix, onChange }: { label: string; value: number; saved: number; min: number; max: number; step: number; editable: boolean; suffix?: (n: number) => string; onChange: (v: number) => void }) {
+  const { fmt } = usePrefs();
+  const before = useRef(value);
+  return (
+    <EditRow
+      label={label}
+      value={suffix ? suffix(value) : fmt(value)}
+      editable={editable}
+      changed={value !== saved}
+      onOpen={() => (before.current = value)}
+      onCancel={() => onChange(before.current)}
+      editor={() => <NumberBox label={label} value={value} min={min} max={max} step={step} onChange={onChange} />}
+    />
+  );
+}
+
+function NumberBox({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
+  const [v, setV] = useState(String(value));
+  return (
+    <Field label={label}>
+      <input
+        className="input input--num"
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        required
+        value={v}
+        autoFocus
+        onChange={(e) => {
+          setV(e.target.value);
+          const n = Number(e.target.value);
+          if (e.target.value !== '' && Number.isInteger(n)) onChange(n);
+        }}
+      />
+    </Field>
+  );
+}
+
+export interface PinDraft {
+  at: LatLng | null;
+  address: string;
+  directions: string;
+}
+const pinOf = (pin: Pin | null): PinDraft => ({ at: pin ? { lat: Number(pin.lat), lng: Number(pin.lng) } : null, address: pin?.address ?? '', directions: pin?.directions ?? '' });
+const samePin = (a: PinDraft, b: PinDraft) => a.at?.lat === b.at?.lat && a.at?.lng === b.at?.lng && a.address === b.address && a.directions === b.directions;
+
+/** Location and address, last on the page (ADC-LOG-794 item 3); edits wait for the one Save. */
+function Location({ pin, draft, unlock, savedUnlock, host, onPin, onUnlock }: { pin: Pin | null; draft: PinDraft; unlock: number; savedUnlock: number; host: boolean; onPin: (p: PinDraft) => void; onUnlock: (n: number) => void }) {
+  const { c, fmt } = usePrefs();
+  const saved = pinOf(pin);
+  const before = useRef(draft);
+  const changed = !samePin(draft, saved);
+  const editor = () => <LocationBox draft={draft} onChange={onPin} />;
+  const opened = () => (before.current = draft);
+  return (
+    <div className="edit-list">
+      <p className="muted small">{c.settings.locationBody}</p>
+      {draft.at && <MapView at={draft.at} />}
+      <EditRow
+        label={c.settings.address}
+        value={draft.address ? <bdi>{draft.address}</bdi> : <span className="muted">{draft.at ? c.page.notSet : c.page.noPin}</span>}
+        editable={host}
+        changed={changed}
+        onOpen={opened}
+        onCancel={() => onPin(before.current)}
+        editor={editor}
+      />
+      <EditRow
+        label={c.settings.directions}
+        value={draft.directions ? <bdi>{draft.directions}</bdi> : <span className="muted">{c.page.notSet}</span>}
+        editable={host}
+        changed={changed}
+        onOpen={opened}
+        onCancel={() => onPin(before.current)}
+        editor={editor}
+      />
+      <NumberRow label={c.settings.pinUnlock} value={unlock} saved={savedUnlock} min={0} max={720} step={15} editable={host} suffix={(n) => c.page.minutes(n, fmt)} onChange={onUnlock} />
+      {!host && <p className="muted">{c.map.hostOnly}</p>}
+    </div>
+  );
+}
+
+function LocationBox({ draft, onChange }: { draft: PinDraft; onChange: (p: PinDraft) => void }) {
+  const { c } = usePrefs();
+  return (
+    <>
+      <MapPicker value={draft.at} onChange={(at) => onChange({ ...draft, at })} />
+      {!draft.at && <p className="muted small">{c.map.needPin}</p>}
+      <Field label={c.settings.address} hint={c.settings.addressHint}>
+        <textarea className="input" rows={2} maxLength={200} value={draft.address} onChange={(e) => onChange({ ...draft, address: e.target.value })} autoComplete="street-address" />
+      </Field>
+      <Field label={c.settings.directions}>
+        <textarea className="input" rows={2} maxLength={300} value={draft.directions} onChange={(e) => onChange({ ...draft, directions: e.target.value })} />
+      </Field>
+    </>
+  );
+}
+
+/** The settings patch the host has made but not saved: only the fields that differ. */
+export function settingsPatch(dw: Diwaniya, draft: Partial<DiwaniyaSettings>): Partial<DiwaniyaSettings> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(draft)) if ((dw as unknown as Record<string, unknown>)[k] !== v) out[k] = v;
+  return out as Partial<DiwaniyaSettings>;
+}
+
 // ---------------------------------------------------------------- the page
 
 function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwaniya[]; onPick: (id: string) => void; onChanged: () => void }) {
@@ -271,7 +496,10 @@ function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwan
     return { pin, regulars, cohosts };
   }, [dw.id], ['regulars', 'cohosts']);
   const act = useAction();
+  const saving = useAction();
   const [notice, setNotice] = useState('');
+  const [savedNote, setSavedNote] = useState('');
+  const [check, setCheck] = useState('');
   const run = (fn: () => Promise<unknown>, ok = '') =>
     void act.run(async () => {
       await fn();
@@ -279,10 +507,49 @@ function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwan
       night.reload();
       extra.reload();
     });
-  const save = (patch: Partial<DiwaniyaSettings>) => async () => {
-    await updateDiwaniya(dw.id, patch);
-    setNotice(c.common.saved);
-    onChanged();
+
+  // Everything the host changes waits here until the one Save at the bottom (ADC-LOG-794 item 3).
+  const [draft, setDraft] = useState<Partial<DiwaniyaSettings>>({});
+  const [pinDraft, setPinDraft] = useState<PinDraft | null>(null);
+  const v = { ...dw, ...draft } as Diwaniya;
+  const set = (p: Partial<DiwaniyaSettings>) => {
+    setSavedNote('');
+    setCheck('');
+    setDraft((d) => ({ ...d, ...p }));
+  };
+  const pinSaved = pinOf(extra.data?.pin ?? null);
+  const pinNow = pinDraft ?? pinSaved;
+  const patch = settingsPatch(dw, draft);
+  const pinChanged = pinDraft !== null && !samePin(pinDraft, pinSaved);
+  const changes = Object.keys(patch).length + (pinChanged ? 1 : 0);
+  const dirty = changes > 0;
+  // Leaving with unsaved changes asks first.
+  useEffect(() => {
+    if (!dirty) return;
+    const stop = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', stop);
+    return () => window.removeEventListener('beforeunload', stop);
+  }, [dirty]);
+  const discard = () => {
+    setDraft({});
+    setPinDraft(null);
+    setCheck('');
+  };
+  const saveAll = () => {
+    if (patch.name !== undefined && !patch.name.trim()) return setCheck(c.page.needName);
+    if (patch.guest_cap !== undefined && (patch.guest_cap < 0 || patch.guest_cap > 30)) return setCheck(c.page.range(c.settings.guestCap, fmt(0), fmt(30)));
+    if (patch.pin_unlock_minutes !== undefined && (patch.pin_unlock_minutes < 0 || patch.pin_unlock_minutes > 720)) return setCheck(c.page.range(c.settings.pinUnlock, fmt(0), fmt(720)));
+    if (pinChanged && !pinDraft!.at) return setCheck(c.map.needPin);
+    setCheck('');
+    void saving.run(async () => {
+      if (Object.keys(patch).length) await updateDiwaniya(dw.id, patch.name !== undefined ? { ...patch, name: patch.name.trim() } : patch);
+      if (pinChanged && pinDraft!.at) await setPin(dw.id, pinDraft!.at.lat, pinDraft!.at.lng, pinDraft!.directions.trim(), pinDraft!.address.trim().replace(/[\u0000-\u001f\u007f]/g, ' '));
+      setDraft({});
+      setPinDraft(null);
+      setSavedNote(c.common.saved);
+      extra.reload();
+      onChanged();
+    });
   };
 
   return (
@@ -317,33 +584,65 @@ function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwan
       {act.error != null && <ErrorNote text={err(act.error)} />}
       {notice && <OkNote text={notice} />}
 
-      {/* ---------- Tonight ---------- */}
+      {/* ---------- Tonight, with the settings at its top (ADC-LOG-794 item 3) ---------- */}
       <Part id="dw-tonight" icon={CalendarCheck} title={c.page.tonight} wide>
-        {night.loading && !night.data ? (
-          <Skeleton rows={1} />
-        ) : night.error != null && night.data === undefined ? (
-          <ErrorNote text={err(night.error)} onRetry={night.reload} />
-        ) : !night.data ? (
-          <OpenTonight id={dw.id} busy={act.busy} onOpen={(at) => run(() => openNight(dw.id, at))} />
-        ) : (
-          <>
-            <div className="dw-tonight">
-              <p className="dw-tonight__state">
-                <span className="tag tag--saffron">{c.board.nightOpen(time(night.data.starts_at))}</span>
-              </p>
-              <button
-                type="button"
-                className="btn btn--danger btn--small"
-                disabled={act.busy}
-                onClick={() => window.confirm(c.board.closeConfirm) && run(() => closeNight(night.data!.id))}
-              >
-                <Prohibit size={16} aria-hidden="true" />
-                {c.board.closeNight}
-              </button>
-            </div>
-            <Announce nightId={night.data.id} />
-          </>
-        )}
+        <div className="edit-list dw-settings">
+          <TextRow label={c.board.name} value={v.name} saved={dw.name} editable={host} max={60} required onChange={(x) => set({ name: x })} />
+          <AreaRow value={v.area} editable={host} changed={v.area !== dw.area} onChange={(x) => set({ area: x })} />
+          <TextRow label={c.settings.usualSlot} hint={c.settings.usualSlotHint} value={v.usual_slot} saved={dw.usual_slot} editable={host} max={40} onChange={(x) => set({ usual_slot: x })} />
+          <SelectRow
+            label={c.settings.visibility}
+            value={v.visibility}
+            changed={v.visibility !== dw.visibility}
+            options={(['public', 'followers'] as const).map((x) => ({ value: x, label: c.settings.visibilityOpts[x] }))}
+            editable={host}
+            onChange={(x) => set({ visibility: x })}
+          />
+          <SelectRow
+            label={c.settings.approval}
+            value={v.approval}
+            changed={v.approval !== dw.approval}
+            options={(['host', 'regulars_auto'] as const).map((x) => ({ value: x, label: c.settings.approvalOpts[x] }))}
+            editable={host}
+            onChange={(x) => set({ approval: x })}
+          />
+          <NumberRow label={c.settings.guestCap} value={v.guest_cap} saved={dw.guest_cap} min={0} max={30} step={1} editable={host} onChange={(x) => set({ guest_cap: x })} />
+          <SelectRow
+            label={c.messages.setting}
+            value={v.messages_on ? 'on' : 'off'}
+            changed={v.messages_on !== dw.messages_on}
+            options={(['on', 'off'] as const).map((x) => ({ value: x, label: c.messages.settingOpts[x] }))}
+            editable={host}
+            onChange={(x) => set({ messages_on: x === 'on' })}
+          />
+        </div>
+        <div className="dw-night">
+          {night.loading && !night.data ? (
+            <Skeleton rows={1} />
+          ) : night.error != null && night.data === undefined ? (
+            <ErrorNote text={err(night.error)} onRetry={night.reload} />
+          ) : !night.data ? (
+            <OpenTonight id={dw.id} busy={act.busy} onOpen={(at) => run(() => openNight(dw.id, at))} />
+          ) : (
+            <>
+              <div className="dw-tonight">
+                <p className="dw-tonight__state">
+                  <span className="tag tag--saffron">{c.board.nightOpen(time(night.data.starts_at))}</span>
+                </p>
+                <button
+                  type="button"
+                  className="btn btn--danger btn--small"
+                  disabled={act.busy}
+                  onClick={() => window.confirm(c.board.closeConfirm) && run(() => closeNight(night.data!.id))}
+                >
+                  <Prohibit size={16} aria-hidden="true" />
+                  {c.board.closeNight}
+                </button>
+              </div>
+              <Announce nightId={night.data.id} />
+            </>
+          )}
+        </div>
       </Part>
 
       {/* ---------- Requests ---------- */}
@@ -383,58 +682,53 @@ function DiwaniyaPage({ dw, all, onPick, onChanged }: { dw: Diwaniya; all: Diwan
         )}
       </Part>
 
-      {/* ---------- Location and address ---------- */}
-      <Part id="dw-location" icon={MapPin} title={c.page.location}>
-        {extra.data ? <Location dw={dw} pin={extra.data.pin} host={host} onSaved={() => { setNotice(c.common.saved); extra.reload(); onChanged(); }} /> : <Skeleton rows={1} />}
-      </Part>
-
       {/* ---------- About and rules ---------- */}
       <Part id="dw-rules" icon={Article} title={c.page.rules}>
         <div className="edit-list">
-          <TextRow label={c.settings.about} value={dw.about} editable={host} max={500} rows={3} onSave={(v) => save({ about: v })()} />
-          <TextRow label={c.settings.rules} value={dw.rules} editable={host} max={1000} rows={4} onSave={(v) => save({ rules: v })()} />
+          <TextRow label={c.settings.about} value={v.about} saved={dw.about} editable={host} max={500} rows={3} onChange={(x) => set({ about: x })} />
+          <TextRow label={c.settings.rules} value={v.rules} saved={dw.rules} editable={host} max={1000} rows={4} onChange={(x) => set({ rules: x })} />
         </div>
       </Part>
 
-      {/* ---------- Settings ---------- */}
-      <Part id="dw-settings" icon={GearSix} title={c.page.settings}>
-        <div className="edit-list">
-          <TextRow label={c.board.name} value={dw.name} editable={host} max={60} required onSave={(v) => save({ name: v.trim() })()} />
-          <EditRow
-            label={c.profile.area}
-            value={<bdi>{areaLabel(dw.area, prefs.lang)}</bdi>}
-            editable={host}
-            editor={(close) => <AreaEditor label={c.profile.area} value={dw.area} close={close} onSave={(v) => save({ area: v })()} />}
+      {/* ---------- Location and address: last (ADC-LOG-794 item 3) ---------- */}
+      <Part id="dw-location" icon={MapPin} title={c.page.location}>
+        {extra.data ? (
+          <Location
+            pin={extra.data.pin}
+            draft={pinNow}
+            unlock={v.pin_unlock_minutes}
+            savedUnlock={dw.pin_unlock_minutes}
+            host={host}
+            onPin={(p) => {
+              setSavedNote('');
+              setPinDraft(p);
+            }}
+            onUnlock={(x) => set({ pin_unlock_minutes: x })}
           />
-          <TextRow label={c.settings.usualSlot} hint={c.settings.usualSlotHint} value={dw.usual_slot} editable={host} max={40} onSave={(v) => save({ usual_slot: v })()} />
-          <ChoiceRow
-            label={c.settings.visibility}
-            value={dw.visibility}
-            options={(['public', 'followers'] as const).map((v) => ({ value: v, label: c.settings.visibilityOpts[v] }))}
-            editable={host}
-            onSave={(v) => save({ visibility: v })()}
-          />
-          <ChoiceRow
-            label={c.settings.approval}
-            value={dw.approval}
-            options={(['host', 'regulars_auto'] as const).map((v) => ({ value: v, label: c.settings.approvalOpts[v] }))}
-            editable={host}
-            onSave={(v) => save({ approval: v })()}
-          />
-          <NumberRow label={c.settings.guestCap} value={dw.guest_cap} min={0} max={30} step={1} editable={host} onSave={(v) => save({ guest_cap: v })()} />
-          <ChoiceRow
-            label={c.messages.setting}
-            value={dw.messages_on ? 'on' : 'off'}
-            options={(['on', 'off'] as const).map((v) => ({ value: v, label: c.messages.settingOpts[v] }))}
-            editable={host}
-            onSave={(v) => save({ messages_on: v === 'on' })()}
-          />
-        </div>
+        ) : (
+          <Skeleton rows={1} />
+        )}
       </Part>
+
+      {/* ---------- One Save for the whole page ---------- */}
+      {host && (
+        <div className={dirty ? 'dw-save dw-save--dirty' : 'dw-save'} aria-live="polite">
+          {saving.error != null && <ErrorNote text={err(saving.error)} />}
+          {check && <ErrorNote text={check} />}
+          {savedNote && !dirty && <OkNote text={savedNote} />}
+          <p className="dw-save__state muted small">{dirty ? c.page.unsaved(changes, fmt) : c.page.allSaved}</p>
+          <div className="dw-save__acts">
+            {dirty && <CancelButton onClick={discard} label={c.page.discard} />}
+            <button type="button" className="btn btn--primary" disabled={!dirty || saving.busy} onClick={saveAll}>
+              <FloppyDisk size={18} aria-hidden="true" />
+              {c.common.save}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
 
 function OpenTonight({ id, busy, onOpen }: { id: string; busy: boolean; onOpen: (at: Date) => void }) {
   const { c } = usePrefs();
@@ -457,179 +751,6 @@ function OpenTonight({ id, busy, onOpen }: { id: string; busy: boolean; onOpen: 
         </button>
       </form>
     </>
-  );
-}
-
-function TextRow({
-  label,
-  value,
-  editable,
-  max,
-  rows,
-  required,
-  hint,
-  onSave,
-}: {
-  label: string;
-  value: string;
-  editable: boolean;
-  max: number;
-  rows?: number;
-  required?: boolean;
-  hint?: string;
-  onSave: (v: string) => Promise<unknown>;
-}) {
-  const { c } = usePrefs();
-  return (
-    <EditRow
-      label={label}
-      value={value ? <bdi className={rows ? 'edit-row__long' : undefined}>{value}</bdi> : <span className="muted">{c.page.notSet}</span>}
-      editable={editable}
-      editor={(close) => <TextEditor label={label} initial={value} max={max} rows={rows} required={required} hint={hint} close={close} onSave={onSave} />}
-    />
-  );
-}
-
-function TextEditor({ label, initial, max, rows, required, hint, close, onSave }: { label: string; initial: string; max: number; rows?: number; required?: boolean; hint?: string; close: () => void; onSave: (v: string) => Promise<unknown> }) {
-  const [v, setV] = useState(initial);
-  return (
-    <Editor label={label} close={close} onSave={() => onSave(v)} saveDisabled={required && v.trim() === ''}>
-      <Field label={label} hint={hint}>
-        {rows ? (
-          <textarea className="input" rows={rows} maxLength={max} value={v} autoFocus onChange={(e) => setV(e.target.value)} />
-        ) : (
-          <input className="input" maxLength={max} required={required} value={v} autoFocus onChange={(e) => setV(e.target.value)} />
-        )}
-      </Field>
-    </Editor>
-  );
-}
-
-function AreaEditor({ label, value, close, onSave }: { label: string; value: string; close: () => void; onSave: (v: string) => Promise<unknown> }) {
-  const [v, setV] = useState(value);
-  return (
-    <Editor label={label} close={close} onSave={() => onSave(v)} saveDisabled={!v}>
-      <Field label={label}>
-        <AreaSelect required value={v} onChange={setV} />
-      </Field>
-    </Editor>
-  );
-}
-
-function ChoiceRow<T extends string>({ label, value, options, editable, onSave }: { label: string; value: T; options: { value: T; label: string }[]; editable: boolean; onSave: (v: T) => Promise<unknown> }) {
-  return (
-    <EditRow
-      label={label}
-      value={options.find((o) => o.value === value)?.label ?? value}
-      editable={editable}
-      editor={(close) => <ChoiceEditor label={label} value={value} options={options} close={close} onSave={onSave} />}
-    />
-  );
-}
-
-function ChoiceEditor<T extends string>({ label, value, options, close, onSave }: { label: string; value: T; options: { value: T; label: string }[]; close: () => void; onSave: (v: T) => Promise<unknown> }) {
-  const [v, setV] = useState<T>(value);
-  return (
-    <Editor label={label} close={close} onSave={() => onSave(v)}>
-      <Field label={label}>
-        <select className="input" value={v} autoFocus onChange={(e) => setV(e.target.value as T)}>
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </Field>
-    </Editor>
-  );
-}
-
-function NumberRow({ label, value, min, max, step, editable, suffix, onSave }: { label: string; value: number; min: number; max: number; step: number; editable: boolean; suffix?: (n: number) => string; onSave: (v: number) => Promise<unknown> }) {
-  const { fmt } = usePrefs();
-  return (
-    <EditRow
-      label={label}
-      value={suffix ? suffix(value) : fmt(value)}
-      editable={editable}
-      editor={(close) => <NumberEditor label={label} value={value} min={min} max={max} step={step} close={close} onSave={onSave} />}
-    />
-  );
-}
-
-function NumberEditor({ label, value, min, max, step, close, onSave }: { label: string; value: number; min: number; max: number; step: number; close: () => void; onSave: (v: number) => Promise<unknown> }) {
-  const [v, setV] = useState(String(value));
-  const n = Number(v);
-  return (
-    <Editor label={label} close={close} onSave={() => onSave(n)} saveDisabled={!Number.isInteger(n) || n < min || n > max}>
-      <Field label={label}>
-        <input className="input input--num" type="number" min={min} max={max} step={step} required value={v} autoFocus onChange={(e) => setV(e.target.value)} />
-      </Field>
-    </Editor>
-  );
-}
-
-function Location({ dw, pin, host, onSaved }: { dw: Diwaniya; pin: Pin | null; host: boolean; onSaved: () => void }) {
-  const { c, fmt } = usePrefs();
-  const at = pin ? { lat: Number(pin.lat), lng: Number(pin.lng) } : null;
-  return (
-    <div className="edit-list">
-      <p className="muted small">{c.settings.locationBody}</p>
-      {at && <MapView at={at} />}
-      <EditRow
-        label={c.settings.address}
-        value={pin?.address ? <bdi>{pin.address}</bdi> : <span className="muted">{pin ? c.page.notSet : c.page.noPin}</span>}
-        editable={host}
-        editor={(close) => <LocationEditor dw={dw} pin={pin} close={close} onSaved={onSaved} />}
-      />
-      <EditRow
-        label={c.settings.directions}
-        value={pin?.directions ? <bdi>{pin.directions}</bdi> : <span className="muted">{c.page.notSet}</span>}
-        editable={host}
-        editor={(close) => <LocationEditor dw={dw} pin={pin} close={close} onSaved={onSaved} />}
-      />
-      <NumberRow
-        label={c.settings.pinUnlock}
-        value={dw.pin_unlock_minutes}
-        min={0}
-        max={720}
-        step={15}
-        editable={host}
-        suffix={(n) => c.page.minutes(n, fmt)}
-        onSave={async (v) => {
-          await updateDiwaniya(dw.id, { pin_unlock_minutes: v });
-          onSaved();
-        }}
-      />
-      {!host && <p className="muted">{c.map.hostOnly}</p>}
-    </div>
-  );
-}
-
-function LocationEditor({ dw, pin, close, onSaved }: { dw: Diwaniya; pin: Pin | null; close: () => void; onSaved: () => void }) {
-  const { c } = usePrefs();
-  const [at, setAt] = useState<LatLng | null>(pin ? { lat: Number(pin.lat), lng: Number(pin.lng) } : null);
-  const [address, setAddress] = useState(pin?.address ?? '');
-  const [directions, setDirections] = useState(pin?.directions ?? '');
-  return (
-    <Editor
-      label={c.page.location}
-      close={close}
-      saveDisabled={!at}
-      onSave={async () => {
-        if (!at) return;
-        await setPin(dw.id, at.lat, at.lng, directions.trim(), address.trim().replace(/[\u0000-\u001f\u007f]/g, ' '));
-        onSaved();
-      }}
-    >
-      <MapPicker value={at} onChange={setAt} />
-      {!at && <p className="muted small">{c.map.needPin}</p>}
-      <Field label={c.settings.address} hint={c.settings.addressHint}>
-        <textarea className="input" rows={2} maxLength={200} value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" />
-      </Field>
-      <Field label={c.settings.directions}>
-        <textarea className="input" rows={2} maxLength={300} value={directions} onChange={(e) => setDirections(e.target.value)} />
-      </Field>
-    </Editor>
   );
 }
 

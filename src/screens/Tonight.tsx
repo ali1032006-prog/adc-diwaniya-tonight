@@ -5,29 +5,61 @@ import { RequestSheet } from './Place';
 import { EmptyState } from '../components/EmptyState';
 import { SeatRing } from '../components/SeatRing';
 import { TableRing, NeedsAccount } from '../components/account';
-import { Chips, ErrorNote, OkNote, Skeleton } from '../components/ui';
+import { Chips, ErrorNote, Field, OkNote, Skeleton } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { useAction, useAsync } from '../lib/useAsync';
-import { areaLabel, governorateLabel, governorateOf } from '../lib/areas';
+import { GOVERNORATES, areaLabel, areaValue, governorateLabel, governorateOf } from '../lib/areas';
+import { COPY } from '../lib/copy';
+import { formatNumber } from '../lib/i18n';
 import { ApiError, GAMES, checkIn, getOpenNight, listTonight, myDiwaniyaList, openSeats, type Game, type MyDiwaniya, type NightRow } from '../lib/api';
 import { href, hrefFor } from '../lib/router';
 
-export type Scope = 'all' | 'gov' | 'area';
-const SCOPE_KEY = 'dt.tonight.scope.v1';
+/** Where to look (ADC-LOG-794 item 4): all of Kuwait, one governorate, or one area. */
+export type Where = 'all' | `gov:${string}` | `area:${string}`;
+const WHERE_KEY = 'dt.tonight.where.v1';
 
-/** Filter tonight's nights by game, by whether a seat is still open, and by the user's area or governorate. */
-export function filterNights(nights: NightRow[], games: Game[], openOnly: boolean, scope: Scope = 'all', myArea = ''): NightRow[] {
-  const myGov = governorateOf(myArea);
+function whereOk(v: string | null): v is Where {
+  return v === 'all' || /^gov:[a-z]+$/.test(v ?? '') || /^area:.+$/.test(v ?? '');
+}
+
+/** Filter tonight's nights by place (governorate or area) and by game. */
+export function filterNights(nights: NightRow[], games: Game[], where: Where = 'all'): NightRow[] {
   return nights
     .filter((n) => {
-      if (scope === 'all' || !myArea) return true;
-      if (scope === 'area') return areaLabel(n.diwaniya?.area, 'ar') === areaLabel(myArea, 'ar');
-      return myGov !== null && governorateOf(n.diwaniya?.area) === myGov;
+      if (where === 'all') return true;
+      if (where.startsWith('gov:')) return governorateOf(n.diwaniya?.area) === where.slice(4);
+      return areaValue(n.diwaniya?.area) === areaValue(where.slice(5));
     })
     .map((n) => ({ ...n, tables: games.length ? n.tables.filter((t) => games.includes(t.game)) : n.tables }))
-    .filter((n) => n.tables.length > 0 || games.length === 0)
-    .filter((n) => !openOnly || n.tables.some((t) => openSeats(t) > 0));
+    .filter((n) => n.tables.length > 0 || games.length === 0);
+}
+
+export interface WhereGroup {
+  value: Where;
+  label: string;
+  areas: { value: Where; label: string }[];
+}
+
+/** The governorates and areas that have a night tonight, with how many, in the reader's language. */
+export function locationOptions(nights: NightRow[], lang: 'ar' | 'en', fmt: (n: number) => string = (n) => formatNumber(n, lang, 'auto')): WhereGroup[] {
+  const c = COPY[lang];
+  const out: WhereGroup[] = [];
+  for (const g of GOVERNORATES) {
+    const here = nights.filter((n) => governorateOf(n.diwaniya?.area) === g.key);
+    if (here.length === 0) continue;
+    const counts = new Map<string, number>();
+    for (const n of here) {
+      const a = areaValue(n.diwaniya?.area);
+      counts.set(a, (counts.get(a) ?? 0) + 1);
+    }
+    const areas = [...counts.entries()]
+      .map(([a, k]) => ({ value: `area:${a}` as Where, name: areaLabel(a, lang), k }))
+      .sort((x, y) => x.name.localeCompare(y.name, lang))
+      .map((x) => ({ value: x.value, label: c.tonight.count(x.name, fmt(x.k)) }));
+    out.push({ value: `gov:${g.key}`, label: c.tonight.allOf(governorateLabel(g.key, lang), fmt(here.length)), areas });
+  }
+  return out;
 }
 
 /** My nights tonight that want an action now: pending, approved (sit) or arrived (score). */
@@ -116,17 +148,23 @@ export function sitTarget(night: NightRow | null, wanted: string | null): { tabl
 
 function TonightList() {
   const { t, c, fmt, time, err, prefs } = usePrefs();
-  const { profile, userId } = useSession();
+  const { userId } = useSession();
   const nights = useAsync(listTonight, [], ['nights', 'game_tables', 'seats']);
   const mine = useAsync(myDiwaniyaList, [], ['requests', 'seats']);
   const [games, setGames] = useState<Game[]>([]);
-  const [openOnly, setOpenOnly] = useState(false);
-  const [scope, setScope] = useState<Scope>(() => (localStorage.getItem(SCOPE_KEY) as Scope) || 'all');
+  const [where, setWhere] = useState<Where>(() => {
+    const v = localStorage.getItem(WHERE_KEY);
+    return whereOk(v) ? v : 'all';
+  });
   const [asking, setAsking] = useState<NightRow | null>(null);
   const [notice, setNotice] = useState('');
-  useEffect(() => localStorage.setItem(SCOPE_KEY, scope), [scope]);
-  const myArea = profile?.area ?? '';
-  const shown = useMemo(() => filterNights(nights.data ?? [], games, openOnly, scope, myArea), [nights.data, games, openOnly, scope, myArea]);
+  useEffect(() => localStorage.setItem(WHERE_KEY, where), [where]);
+  const shown = useMemo(() => filterNights(nights.data ?? [], games, where), [nights.data, games, where]);
+  const places = useMemo(() => locationOptions(nights.data ?? [], prefs.lang, fmt), [nights.data, prefs.lang, fmt]);
+  // A place saved from another night stays pickable even with nothing open there now.
+  const known = where === 'all' || places.some((g) => g.value === where || g.areas.some((a) => a.value === where));
+  const whereLabel = (w: Where) =>
+    w.startsWith('gov:') ? c.tonight.allOf(governorateLabel(w.slice(4), prefs.lang), fmt(0)) : c.tonight.count(areaLabel(w.slice(5), prefs.lang), fmt(0));
   const status = useMemo(() => new Map((mine.data ?? []).filter((d) => d.night_id).map((d) => [d.night_id!, d.my_status])), [mine.data]);
 
   if (nights.loading && !nights.data) return <Skeleton rows={3} />;
@@ -150,18 +188,22 @@ function TonightList() {
       ) : (
         <>
           <div className="filters" role="group" aria-label={c.tonight.filterLabel}>
-            {myArea && (
-              <Chips<Scope>
-                legend={c.quick.scope}
-                value={[scope]}
-                options={[
-                  { value: 'all', label: c.quick.scopeAll },
-                  { value: 'gov', label: governorateLabel(governorateOf(myArea), prefs.lang) || c.quick.scopeGov },
-                  { value: 'area', label: c.quick.scopeArea(areaLabel(myArea, prefs.lang)) },
-                ]}
-                onChange={(v) => setScope(v[0] ?? 'all')}
-              />
-            )}
+            <Field label={c.tonight.where}>
+              <select className="input input--where" value={where} onChange={(e) => setWhere(e.target.value as Where)}>
+                <option value="all">{c.tonight.everywhere}</option>
+                {!known && <option value={where}>{whereLabel(where)}</option>}
+                {places.map((g) => (
+                  <optgroup key={g.value} label={governorateLabel(g.value.slice(4), prefs.lang)}>
+                    <option value={g.value}>{g.label}</option>
+                    {g.areas.map((a) => (
+                      <option key={a.value} value={a.value}>
+                        {a.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </Field>
             <Chips<Game>
               legend={c.tonight.filterLabel}
               multi
@@ -169,24 +211,19 @@ function TonightList() {
               options={GAMES.map((g) => ({ value: g, label: t.games[g] }))}
               onChange={setGames}
             />
-            <label className="chip">
-              <input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} />
-              <span>{c.tonight.openOnly}</span>
-            </label>
           </div>
           <p className="count-line" aria-live="polite">
             {c.tonight.live(shown.length, fmt)}
           </p>
           {shown.length === 0 ? (
             <div className="empty empty--inline">
-              <p className="empty__title">{scope !== 'all' ? c.quick.noneInScope : c.tonight.noMatch}</p>
+              <p className="empty__title">{c.tonight.noMatch}</p>
               <button
                 type="button"
                 className="btn btn--quiet"
                 onClick={() => {
                   setGames([]);
-                  setOpenOnly(false);
-                  setScope('all');
+                  setWhere('all');
                 }}
               >
                 {c.tonight.clear}

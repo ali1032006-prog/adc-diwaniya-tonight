@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { NavBar } from './components/NavBar';
 import { Tonight } from './screens/Tonight';
 import { Board } from './screens/Board';
@@ -10,10 +10,10 @@ import { Welcome } from './screens/Welcome';
 import { SignIn } from './screens/SignIn';
 import { Skeleton } from './components/ui';
 import { Splash, SPLASHED } from './components/Logo';
-import { PrefsContext, loadPrefs, savePrefs, type Prefs } from './lib/prefs';
+import { PrefsContext, loadPrefs, prefsDiff, savePrefs, type Prefs } from './lib/prefs';
 import { SessionProvider, useSession } from './lib/session';
 import { useAsync } from './lib/useAsync';
-import { unreadCount, unreadMessages } from './lib/api';
+import { unreadCount, unreadMessages, updatePrivate } from './lib/api';
 import { UnreadContext } from './lib/unread';
 import { dirFor, STRINGS } from './lib/i18n';
 import { TABS, WELCOMED, currentFrom, go, href, isPushed, tabOf, useRoute, type Route, type Tab } from './lib/router';
@@ -90,10 +90,36 @@ export function App() {
   return (
     <PrefsContext.Provider value={ctx}>
       <SessionProvider>
+        <PrefsSync />
         <Shell />
       </SessionProvider>
     </PrefsContext.Provider>
   );
+}
+
+/**
+ * Keeps the account's saved language, numerals and theme in step with this device (ADC-LOG-794
+ * item 2). Before, the Me page wrote the account's old value over the device's choice the first
+ * time it opened, so Arabic flipped to English. Now the device wins and the account follows, once
+ * per change, wherever it was made (Welcome, Me, sign-in).
+ */
+export function PrefsSync() {
+  const { prefs } = useContext(PrefsContext);
+  const { status, userId, priv } = useSession();
+  // What the account holds as far as this tab knows, per person (the session's copy goes stale).
+  const known = useRef<{ user: string; p: Pick<Prefs, 'lang' | 'numerals' | 'theme'> } | null>(null);
+  useEffect(() => {
+    if (status !== 'ready' || !userId || !priv) return;
+    if (known.current?.user !== userId) known.current = { user: userId, p: { lang: priv.lang, numerals: priv.numerals, theme: priv.theme } };
+    const diff = prefsDiff(prefs, known.current.p);
+    if (Object.keys(diff).length === 0) return;
+    const before = known.current.p;
+    known.current = { user: userId, p: { lang: prefs.lang, numerals: prefs.numerals, theme: prefs.theme } };
+    void updatePrivate(diff).catch(() => {
+      if (known.current?.user === userId) known.current = { user: userId, p: before };
+    });
+  }, [status, userId, priv, prefs]);
+  return null;
 }
 
 function Shell() {
