@@ -48,7 +48,7 @@ def email_provider(on):
     req = urllib.request.Request(
         sql_test.API + "config/auth", data=json.dumps({"external_email_enabled": on}).encode(),
         headers={"Authorization": "Bearer " + sql_test.TOKEN, "Content-Type": "application/json",
-                 "User-Agent": "adc-diwaniya-tonight-tests"},
+                 "User-Agent": "adc-diwaniyatna-tests"},
         method="PATCH")
     # Fixed https host; the ref is checked in sql_test and the path is a literal.
     cfg = json.loads(urllib.request.urlopen(req, timeout=60).read().decode())  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
@@ -82,7 +82,7 @@ def cleanup():
 
 def email_provider_now():
     req = urllib.request.Request(sql_test.API + "config/auth", headers={
-        "Authorization": "Bearer " + sql_test.TOKEN, "User-Agent": "adc-diwaniya-tonight-tests"})
+        "Authorization": "Bearer " + sql_test.TOKEN, "User-Agent": "adc-diwaniyatna-tests"})
     # Fixed https host; the ref is checked in sql_test and the path is a literal.
     return bool(json.loads(urllib.request.urlopen(req, timeout=60).read().decode()).get("external_email_enabled"))  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
 

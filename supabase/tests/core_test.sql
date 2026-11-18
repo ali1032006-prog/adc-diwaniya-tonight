@@ -1,4 +1,4 @@
--- Behaviour and access tests for the Diwaniya Tonight core schema
+-- Behaviour and access tests for the Diwaniyatna core schema
 -- (supabase/migrations/20261117182827_core_schema.sql + 20261117192322_signin_men_only.sql). One transaction that always rolls
 -- back. Users are acted out with request.jwt.claims under role authenticated. Visibility checks are
 -- scoped to this test's own diwaniya, so the mock pilot data (supabase/seed/mock_pilot.sql) can stay on dev.

@@ -8,7 +8,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const HOOK_SECRET = Deno.env.get('PUSH_HOOK_SECRET') ?? '';
 webpush.setVapidDetails(
-  Deno.env.get('VAPID_SUBJECT') ?? 'https://adc-diwaniya-tonight.pages.dev',
+  Deno.env.get('VAPID_SUBJECT') ?? 'https://adc-diwaniyatna.pages.dev',
   Deno.env.get('VAPID_PUBLIC_KEY') ?? '',
   Deno.env.get('VAPID_PRIVATE_KEY') ?? '',
 );

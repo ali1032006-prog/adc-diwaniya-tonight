@@ -1,12 +1,17 @@
-# adc-diwaniya-tonight
+# adc-diwaniyatna
 
-Diwaniyatna (ديوانيتنا, formerly Diwaniya Tonight; repo, Supabase and Pages names unchanged): open diwaniyas with live seats, a missing-seat ping, host join approvals, safety, and a shared league table (ADC-PRJ-4, build Task ADC-TSK-36).
+Diwaniyatna (ديوانيتنا, formerly Diwaniya Tonight; renamed everywhere on Ali's order of 2026-11-18 22:41 Kuwait): open diwaniyas with live seats, a missing-seat ping, host join approvals, safety, and a shared league table (ADC-PRJ-4, build Task ADC-TSK-36).
 
 - Research brief: ADC-RES-49 (Viktor). Design contract: ADC-RES-50 (UI direction: woven night, live seat ring). Both in Notion, Research & Ideas.
-- Stack: Vite + React + TypeScript PWA, Supabase (dev project `diwaniya-tonight-dev`), Cloudflare Pages (`adc-diwaniya-tonight`).
+- Stack: Vite + React + TypeScript PWA, Supabase (dev project `diwaniyatna-dev`, same ref as before), Cloudflare Pages (`adc-diwaniyatna`; the old `adc-diwaniya-tonight` Pages project still runs, its removal is Ali's call).
 - Arabic first (`dir=rtl`), English toggle. Logical CSS properties only, so both directions come from one layout.
 - Navigation: bottom bar with 5 labelled tabs and a sliding pill on phones and tablets; a rail at 840px+ or in short landscape.
 - Motion: transform and opacity only, M3 easing, crossfades under `prefers-reduced-motion`.
+
+## Names after the rename (2026-11-18)
+
+- GitHub `ali1032006-prog/adc-diwaniyatna` (the old URL redirects). Supabase display name `diwaniyatna-dev`; the project ref, Google callback and OAuth setup are unchanged.
+- Kept on purpose: browser storage keys (`dt.*`), so nobody loses settings or a pending sign-in; the manifest has no `id`, so installed apps keep their identity; `.env` key names (`DIWANIYA_TONIGHT_DEV_*`), which only the scripts read; and the text of already-applied migrations, which must match what ran on the database.
 
 ## Commands
 
@@ -25,7 +30,7 @@ SUPABASE_ENV_FILE=<env file> npm run seed:mock  # re-create the mock pilot data 
 SUPABASE_ENV_FILE=<env file> python3 scripts/create_test_accounts.py --check|--create|--email-on|--verify   # dev only
 ```
 
-The four accounts (Jayce user/admin, Vi user/admin, `*.test@example.com`) live on `diwaniya-tonight-dev` only, are email-confirmed, and sign in through the normal email + password form like anyone else; there is no separate test form or preview build any more. Their passwords are Ali's and live only in the profile `.env` files (`DIWANIYA_TEST_<JAYCE|VI>_<USER|ADMIN>_PASSWORD`). `--verify` prints, per account, only whether the address is confirmed and whether the public password sign-in works (then signs that session out).
+The four accounts (Jayce user/admin, Vi user/admin, `*.test@example.com`) live on `diwaniyatna-dev` only, are email-confirmed, and sign in through the normal email + password form like anyone else; there is no separate test form or preview build any more. Their passwords are Ali's and live only in the profile `.env` files (`DIWANIYA_TEST_<JAYCE|VI>_<USER|ADMIN>_PASSWORD`). `--verify` prints, per account, only whether the address is confirmed and whether the public password sign-in works (then signs that session out).
 
 The app reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from a git-ignored `.env.local` at build time. The publishable key is meant for browsers; RLS and the RPCs guard the data.
 
@@ -33,7 +38,7 @@ The app reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from a git
 
 `src/lib/api.ts` holds every read and write; `src/lib/session.tsx` holds the Supabase session and profile. Hash routes: `#/pings` (S4 install and pings guide, shown after profile setup and from Me), `#/admin` (moderation queue, admins only), `#/welcome` (S1), `#/signin?mode=signin|register` (S2), `#/terms`, `#/tonight` (S5), `#/d/<id>` Diwaniya page with the request sheet (S6/S7) and report sheet (S15), `#/diwaniya` host board and followed list (S8), `#/settings/<id>` (S9), `#/score/<id>?table=<id>` full-screen scoring (S10), `#/league` (S11), `#/player/<id>` (S12), `#/inbox` (S13), `#/me` detailed settings (S14). Seats, requests, queues and the inbox refresh live through Realtime. Signed out, every screen teaches what it shows and offers Sign in / New account.
 
-## Database (Supabase dev `diwaniya-tonight-dev`)
+## Database (Supabase dev `diwaniyatna-dev`)
 
 - `supabase/migrations/` holds every schema change, named with the version the server gave it. RLS is on for every table; `anon` has no grants at all.
 - Area only until approval: the exact location sits in `diwaniya_pins`, readable by the host, co-hosts and approved guests once tonight's unlock time has passed.

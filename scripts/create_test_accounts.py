@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create the four review test accounts on diwaniya-tonight-dev (Ali's ruling on Agent Issue 52, ADC-LOG-775).
+"""Create the four review test accounts on diwaniyatna-dev (Ali's ruling on Agent Issue 52, ADC-LOG-775).
 
   python3 scripts/create_test_accounts.py --check     key names present? (prints names and lengths only)
   python3 scripts/create_test_accounts.py --create    create/refresh the 4 accounts, profiles (18+, Terms), admins
@@ -49,7 +49,7 @@ REF = E.get("DIWANIYA_TONIGHT_DEV_SUPABASE_REF", "")
 URL = E.get("DIWANIYA_TONIGHT_DEV_SUPABASE_URL", "").rstrip("/")
 TOKEN = E.get("SUPABASE_ACCESS_TOKEN", "")
 if REF != "rwddsgrgwqsdsmzyfzea" or URL != "https://" + REF + ".supabase.co":
-    sys.exit("refusing: this script runs on diwaniya-tonight-dev only")
+    sys.exit("refusing: this script runs on diwaniyatna-dev only")
 
 
 def http(method, url, headers, body=None):

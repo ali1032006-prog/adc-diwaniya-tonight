@@ -2,7 +2,7 @@ import { useId } from 'react';
 
 /**
  * The woven band: an original repeat of triangles and a lozenge in the app's four colour roles,
- * drawn for Diwaniya Tonight after the banded structure of Sadu weaving. Not traced from any cloth.
+ * drawn for Diwaniyatna after the banded structure of Sadu weaving. Not traced from any cloth.
  */
 export function WovenBand({ className = '' }: { className?: string }) {
   const id = useId().replace(/:/g, '');

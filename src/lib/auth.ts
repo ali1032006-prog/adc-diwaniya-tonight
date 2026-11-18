@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-// Sign-in for Diwaniya Tonight: Google (Ali's ruling A, ADC-LOG-696) or an email and a password
+// Sign-in for Diwaniyatna: Google (Ali's ruling A, ADC-LOG-696) or an email and a password
 // (Ali's ruling ADC-LOG-802), both through Supabase Auth.
 
 const AFTER = 'dt.after-signin.v1';

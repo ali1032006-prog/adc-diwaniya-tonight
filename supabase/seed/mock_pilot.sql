@@ -1,4 +1,4 @@
--- Mock pilot data for Diwaniya Tonight (Ali's ruling F, ADC-LOG-697: "come up with a mock yourself").
+-- Mock pilot data for Diwaniyatna (Ali's ruling F, ADC-LOG-697: "come up with a mock yourself").
 -- No real diwaniyas, people or addresses: every name here is made up, every pin is a rough point in
 -- the named area, and every "about" says it is sample data. Dev project only.
 --
