@@ -4,6 +4,7 @@ Diwaniyatna (ديوانيتنا, formerly Diwaniya Tonight; renamed everywhere o
 
 - Research brief: ADC-RES-49 (Viktor). Design contract: ADC-RES-50 (UI direction: woven night, live seat ring). Both in Notion, Research & Ideas.
 - Stack: Vite + React + TypeScript PWA, Supabase (dev project `diwaniyatna-dev`, same ref as before), Cloudflare Pages (`adc-diwaniyatna`; the old `adc-diwaniya-tonight` Pages project still runs, its removal is Ali's call).
+- Hosting move (Ali, 2026-11-18): Vercel Hobby (free, personal/non-commercial use only: no ads, no payments). `vercel.json` carries the build settings, `/tv` routing, the app fallback and the same security headers + CSP as `public/_headers` (`src/vercel.test.ts` keeps the two identical). Vercel env vars needed for Git builds: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_VAPID_PUBLIC_KEY` (public values). The Cloudflare Pages projects keep running until Ali decides.
 - Arabic first (`dir=rtl`), English toggle. Logical CSS properties only, so both directions come from one layout.
 - Navigation: bottom bar with 5 labelled tabs and a sliding pill on phones and tablets; a rail at 840px+ or in short landscape.
 - Motion: transform and opacity only, M3 easing, crossfades under `prefers-reduced-motion`.
