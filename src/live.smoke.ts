@@ -33,12 +33,12 @@ describe.skipIf(!PASS)('api.ts against dev (host + guest)', () => {
     expect(H.id).not.toBe(G.id);
 
     // S3 profiles
-    await H.api.completeProfile('Smoke Host', 'Salmiya', '1985-05-05', true);
+    await H.api.completeProfile('Smoke Host', 'السالمية', '1985-05-05', true);
     await G.api.completeProfile('Smoke Guest', 'Jabriya', '1995-05-05', true);
     expect((await G.api.getMe()).profile?.display_name).toBe('Smoke Guest');
 
     // S8/S9 host opens a diwaniya and a night that started 10 minutes ago
-    const { id: dw } = await H.api.createDiwaniya('Smoke Diwaniya', 'Salmiya');
+    const { id: dw } = await H.api.createDiwaniya('Smoke Diwaniya', 'السالمية');
     await H.api.updateDiwaniya(dw, { rules: 'No stakes', guest_cap: 4, pin_unlock_minutes: 60, usual_slot: 'Thu 9pm' });
     await H.api.setPin(dw, 29.33, 48.08, 'Blue door');
     expect((await H.api.myDiwaniyas()).map((d) => d.id)).toContain(dw);

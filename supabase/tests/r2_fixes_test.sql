@@ -44,10 +44,10 @@ declare
 begin
   foreach u in array array[H, G, A, C, B, S1, S2, S3, Z, K] loop
     perform pg_temp.act(u);
-    perform public.complete_profile('R2' || right(u::text, 2), 'Salmiya', date '1990-01-01', true);
+    perform public.complete_profile('R2' || right(u::text, 2), 'السالمية', date '1990-01-01', true);
   end loop;
   perform pg_temp.act(H);
-  insert into public.diwaniyas (host_id, name, area, guest_cap) values (H, 'Diwaniya R2 Test', 'R2-Area', 10) returning id into v_d;
+  insert into public.diwaniyas (host_id, name, area, guest_cap) values (H, 'Diwaniya R2 Test', 'الشويخ', 10) returning id into v_d;
   insert into public.nights (diwaniya_id, starts_at) values (v_d, now() + interval '1 hour') returning id into v_n;
   insert into public.game_tables (night_id, game, seat_count) values (v_n, 'kout', 6) returning id into v_t;
 
@@ -63,7 +63,7 @@ begin
   -- ADC-SEC-16 (3): five requests in 10 minutes across nights, then refused
   perform pg_temp.act(H);
   for i in 1..4 loop
-    insert into public.diwaniyas (host_id, name, area) values (H, 'R2 extra ' || i, 'R2-Area') returning id into v_nw;
+    insert into public.diwaniyas (host_id, name, area) values (H, 'R2 extra ' || i, 'الشويخ') returning id into v_nw;
     insert into public.nights (diwaniya_id, starts_at) values (v_nw, now() + interval '1 hour') returning id into v_nw;
     v_dw := v_dw || v_nw;
   end loop;
@@ -225,7 +225,7 @@ begin
     raise exception 'FAIL: SEC-17 ban stored something other than a hash'; end if;
   set local role authenticated;
   perform pg_temp.act('00000000-0000-4000-8000-0000000000eb');
-  begin perform public.complete_profile('Back again', 'Salmiya', date '1990-01-01', true);
+  begin perform public.complete_profile('Back again', 'السالمية', date '1990-01-01', true);
     raise exception 'FAIL: SEC-17 hidden person came back clean';
   exception when sqlstate '42501' then null; end;
 

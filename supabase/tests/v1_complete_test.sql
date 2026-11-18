@@ -91,15 +91,15 @@ begin
 
   -- 2. host opens a night in a unique area; G follows; P opted in to kout here, Q elsewhere
   perform pg_temp.act(H);
-  insert into public.diwaniyas (host_id, name, area) values (H, 'Diwaniya V1 Test', 'V1-Testarea') returning id into v_d;
+  insert into public.diwaniyas (host_id, name, area) values (H, 'Diwaniya V1 Test', 'الخيران') returning id into v_d;
   insert into public.nights (diwaniya_id, starts_at) values (v_d, now() + interval '2 hours') returning id into v_n;
   insert into public.game_tables (night_id, game, seat_count) values (v_n, 'kout', 6) returning id into v_t;
   perform pg_temp.act(G);
   insert into public.follows (user_id, diwaniya_id) values (G, v_d);
   perform pg_temp.act(P);
-  update public.profile_private set ping_games = '{kout}', ping_areas = '{" v1-testarea "}' where user_id = P;
+  update public.profile_private set ping_games = '{kout}', ping_areas = '{" الخيران "}' where user_id = P;
   perform pg_temp.act(Q);
-  update public.profile_private set ping_games = '{kout}', ping_areas = '{Jahra}' where user_id = Q;
+  update public.profile_private set ping_games = '{kout}', ping_areas = '{الجهراء}' where user_id = Q;
 
   -- 3. need one: followers and opted-in area players, once per 30 minutes
   perform pg_temp.act(H);
@@ -273,7 +273,7 @@ begin
   if exists (select 1 from public.diwaniyas where id = v_d) then raise exception 'FAIL: hidden person''s diwaniya visible'; end if;
   perform pg_temp.act(H);
   if not exists (select 1 from public.profiles where id = H) then raise exception 'FAIL: hidden person can''t see himself'; end if;
-  begin insert into public.diwaniyas (host_id, name, area) values (H, 'Again', 'x'); raise exception 'FAIL: hidden person hosted';
+  begin insert into public.diwaniyas (host_id, name, area) values (H, 'Again', 'الروضة'); raise exception 'FAIL: hidden person hosted';
   exception when insufficient_privilege then null; end;
   perform pg_temp.act(A);
   if not exists (select 1 from public.profiles where id = H) then raise exception 'FAIL: admin can''t see hidden person'; end if;

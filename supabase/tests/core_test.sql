@@ -55,22 +55,22 @@ declare
 begin
   -- 1. profile: age gate, terms, once-only birth date
   perform pg_temp.act(Y);
-  begin perform public.complete_profile('Young', 'Salmiya', (current_date - interval '16 years')::date, true);
+  begin perform public.complete_profile('Young', 'السالمية', (current_date - interval '16 years')::date, true);
     raise exception 'FAIL: under-age profile accepted';
   exception when sqlstate '22023' then null; end;
   perform pg_temp.act(H);
-  begin perform public.complete_profile('Hamad', 'Rawda', date '1980-05-01', false);
+  begin perform public.complete_profile('Hamad', 'القيروان', date '1980-05-01', false);
     raise exception 'FAIL: profile without terms accepted';
   exception when sqlstate '22023' then null; end;
-  begin perform public.complete_profile(E'\u0007 ', 'Rawda', date '1980-05-01', true);
+  begin perform public.complete_profile(E'\u0007 ', 'القيروان', date '1980-05-01', true);
     raise exception 'FAIL: blank name accepted';
   exception when sqlstate '22023' then null; end;
   foreach u in array array[H, C, G, R, S, B, N] loop
     perform pg_temp.act(u);
-    perform public.complete_profile('P' || right(u::text, 2), 'Rawda', date '1990-01-01', true);
+    perform public.complete_profile('P' || right(u::text, 2), 'القيروان', date '1990-01-01', true);
   end loop;
   perform pg_temp.act(G);
-  perform public.complete_profile('Ghanim', 'Jabriya', date '2001-01-01', true);
+  perform public.complete_profile('Ghanim', 'الجابرية', date '2001-01-01', true);
   select count(*) into v_cnt from public.profile_private;
   if v_cnt <> 1 then raise exception 'FAIL: saw % private rows', v_cnt; end if;
   if (select birth_date from public.profile_private) <> date '1990-01-01' then
@@ -85,8 +85,8 @@ begin
   -- 2. host builds a diwaniya; nobody else can claim or edit it
   perform pg_temp.act(H);
   insert into public.diwaniyas (host_id, name, area, approval, guest_cap, pin_unlock_minutes, rules)
-    values (H, 'Diwaniya Al-Hamad', 'Rawda', 'regulars_auto', 1, 60, 'No stakes. Tea is on us.') returning id into v_d;
-  begin insert into public.diwaniyas (host_id, name, area) values (G, 'Fake', 'Rawda'); raise exception 'FAIL: diwaniya for someone else';
+    values (H, 'Diwaniya Al-Hamad', 'القيروان', 'regulars_auto', 1, 60, 'No stakes. Tea is on us.') returning id into v_d;
+  begin insert into public.diwaniyas (host_id, name, area) values (G, 'Fake', 'القيروان'); raise exception 'FAIL: diwaniya for someone else';
   exception when insufficient_privilege then null; end;
   insert into public.diwaniya_pins (diwaniya_id, lat, lng, directions) values (v_d, 29.33000, 47.99000, 'Second gate');
   insert into public.cohosts (diwaniya_id, user_id) values (v_d, C);
@@ -283,7 +283,8 @@ begin
     jsonb_build_object('seat',4,'name','Uncle Saad','team',2,'points',3,'won',false),
     jsonb_build_object('seat',5,'user_id',C,'team',1,'points',6,'won',true),
     jsonb_build_object('seat',6,'name','Walk-in','team',2,'points',3,'won',false)));
-  if (select count(*) from public.league_standings where diwaniya_id = v_d) <> 4 then raise exception 'FAIL: standings rows'; end if;
+  -- 4 accounts + 2 walk-ins: walk-in names count in the league too since ADC-LOG-754 (was 4)
+  if (select count(*) from public.league_standings where diwaniya_id = v_d) <> 6 then raise exception 'FAIL: standings rows'; end if;
   v_j := public.player_stats(G);
   if (v_j->>'games')::int <> 1 or (v_j->>'wins')::int <> 1 or (v_j->>'nights_shown')::int <> 1 then
     raise exception 'FAIL: stats %', v_j; end if;

@@ -55,10 +55,10 @@ declare
 begin
   -- 1. no Terms, no profile (false and null both refused)
   perform pg_temp.act(X);
-  begin perform public.complete_profile('Xavi', 'Salmiya', date '1990-01-01', false);
+  begin perform public.complete_profile('Xavi', 'السالمية', date '1990-01-01', false);
     raise exception 'FAIL: profile without the Terms accepted';
   exception when sqlstate '22023' then null; end;
-  begin perform public.complete_profile('Xavi', 'Salmiya', date '1990-01-01', null);
+  begin perform public.complete_profile('Xavi', 'السالمية', date '1990-01-01', null);
     raise exception 'FAIL: profile with null Terms accepted';
   exception when sqlstate '22023' then null; end;
   if exists (select 1 from public.profiles where id = X) then raise exception 'FAIL: refused profile left a row'; end if;
@@ -69,14 +69,14 @@ begin
 
   -- 2. B: one day short of 18 refused, exactly 18 today accepted
   perform pg_temp.act(E);
-  begin perform public.complete_profile('Eid', 'Jahra', (current_date - interval '18 years' + interval '1 day')::date, true);
+  begin perform public.complete_profile('Eid', 'الجهراء', (current_date - interval '18 years' + interval '1 day')::date, true);
     raise exception 'FAIL: 17-year-old accepted';
   exception when sqlstate '22023' then null; end;
-  perform public.complete_profile('Eid', 'Jahra', (current_date - interval '18 years')::date, true);
+  perform public.complete_profile('Eid', 'الجهراء', (current_date - interval '18 years')::date, true);
 
   -- 3. a profile needs no male confirmation (ADC-LOG-751); Terms time recorded, nobody edits it
   perform pg_temp.act(M);
-  perform public.complete_profile('Mishal', 'Rawda', date '1988-03-03', true);
+  perform public.complete_profile('Mishal', 'الروضة', date '1988-03-03', true);
   if not exists (select 1 from public.profiles where id = M) then raise exception 'FAIL: profile not created'; end if;
   if (select terms_accepted_at from public.profile_private where user_id = M) is null then
     raise exception 'FAIL: Terms acceptance not recorded';
@@ -88,10 +88,10 @@ begin
   -- 4. diwaniyas can't carry an audience any more
   begin
     execute format('insert into public.diwaniyas (host_id, name, area, audience) values (%L, %L, %L, %L)',
-                   M, 'Mixed', 'Rawda', 'all');
+                   M, 'Mixed', 'الروضة', 'all');
     raise exception 'FAIL: audience accepted on insert';
   exception when undefined_column then null; end;
-  insert into public.diwaniyas (host_id, name, area) values (M, 'Diwaniya Mishal', 'Rawda');
+  insert into public.diwaniyas (host_id, name, area) values (M, 'Diwaniya Mishal', 'الروضة');
 end $$;
 reset role;
 
