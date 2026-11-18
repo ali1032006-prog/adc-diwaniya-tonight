@@ -1,4 +1,4 @@
-/* Diwaniya Tonight: "woven night". Direction contract in .impeccable/direction.md; design row ADC-RES-50. */
+/* Diwaniyatna: "woven night". Direction contract in .impeccable/direction.md; design row ADC-RES-50. */
 
 :root {
   /* Night wool (default) */
@@ -11,6 +11,8 @@
   --madder: #c8402f;
   --madder-ink: #ffffff;
   --madder-soft: rgba(200, 64, 47, 0.22);
+  --danger: #ff8a7d; /* remove, cancel, discard, decline, delete: 5.1:1 or more on every night surface */
+  --danger-soft: rgba(255, 138, 125, 0.14);
   --saffron: #f0a93b;
   --saffron-ink: #f0a93b;
   --camel: #b08a64;
@@ -44,6 +46,8 @@
     --ink-muted: #5a4e5e;
     --madder: #a8321f;
     --madder-soft: rgba(168, 50, 31, 0.14);
+    --danger: #a3221a;
+    --danger-soft: rgba(163, 34, 26, 0.1);
     --saffron: #e39a2a;
     --saffron-ink: #8a5200;
     --camel: #8c6a48;
@@ -61,6 +65,8 @@
   --ink-muted: #5a4e5e;
   --madder: #a8321f;
   --madder-soft: rgba(168, 50, 31, 0.14);
+  --danger: #a3221a; /* 4.8:1 or more on every day surface */
+  --danger-soft: rgba(163, 34, 26, 0.1);
   --saffron: #e39a2a;
   --saffron-ink: #8a5200;
   --camel: #8c6a48;
@@ -88,7 +94,7 @@ body {
   font-size: 1rem;
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
-  overflow-x: hidden;
+  overflow-x: clip; /* hidden made body a scroller under html{clip}, so no sticky element ever stuck */
 }
 
 ::selection {
@@ -684,12 +690,21 @@ h2 {
 .welcome__title {
   font-size: 1.5rem;
   font-weight: 700;
+  line-height: 1.3;
   max-width: 22ch;
+  /* Two lines reserved: while Readex Pro loads, the fallback face wraps the headline differently;
+     a fixed box means the swap can't move anything (ADC-TSK-37, CLS 0.114 at 390). */
+  min-height: calc(2 * 1.3em);
+  /* A one-line headline sits at the foot of its box, next to the line it introduces. */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .welcome__body {
   color: var(--ink-muted);
   max-width: 36ch;
+  min-height: calc(2 * 1.6em);
 }
 
 .welcome__dots {
@@ -724,17 +739,42 @@ h2 {
   width: 100%;
 }
 
-@media (orientation: landscape) and (max-height: 499px) {
+/* Short portrait phones (320x568): a smaller seat ring keeps the primary action in the first screen. */
+@media (orientation: portrait) and (max-height: 600px) {
   .welcome {
-    grid-template-rows: auto auto auto 1fr auto auto;
-    gap: 8px;
+    gap: 12px;
   }
   .welcome__art {
     min-height: 0;
   }
   .welcome__art svg {
-    width: 96px;
-    height: 96px;
+    width: 136px;
+    height: 136px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 499px) {
+  .welcome {
+    grid-template-rows: auto auto auto 1fr auto auto;
+    gap: 8px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .welcome__art {
+    min-height: 0;
+  }
+  .welcome__art svg {
+    width: 80px;
+    height: 80px;
+  }
+  /* A landscape phone has the width for one line in either face, so one line is what it reserves;
+     the primary action stays above the fold at 844x390. */
+  .welcome__title {
+    max-width: 40ch;
+    min-height: 1.3em;
+  }
+  .welcome__body {
+    max-width: 60ch;
+    min-height: 1.6em;
   }
 }
 
@@ -1063,17 +1103,6 @@ fieldset:disabled .input {
 }
 
 /* Chips (filters, games) */
-.filters {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin-inline: -20px;
-  padding: 2px 20px 6px;
-}
-.filters::-webkit-scrollbar {
-  display: none;
-}
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -1082,12 +1111,6 @@ fieldset:disabled .input {
   margin: 0;
   padding: 0;
   min-width: 0;
-}
-.filters .chips {
-  flex-wrap: nowrap;
-}
-.filters > * {
-  flex: none;
 }
 .chip {
   position: relative;
@@ -2028,6 +2051,77 @@ fieldset.panel {
   color: var(--saffron-ink);
 }
 
+/* Email + password next to Google (ADC-LOG-802). */
+.signin__or {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}
+.signin__or::before,
+.signin__or::after {
+  content: '';
+  height: 1px;
+  background: var(--hairline);
+}
+.signin__forgot {
+  justify-self: center;
+}
+.signin__check {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  animation: fade-up 220ms var(--ease-enter) both;
+}
+.signin__check-icon {
+  color: var(--saffron-ink);
+}
+.signin__check p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.pw {
+  position: relative;
+  display: block;
+}
+.pw__input {
+  padding-inline-end: 52px;
+}
+.pw__toggle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 2px;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: color 150ms var(--ease-standard);
+}
+.pw__toggle[aria-pressed='true'] {
+  color: var(--ink);
+}
+.pw__toggle:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+@media (hover: hover) {
+  .pw__toggle:hover {
+    color: var(--ink);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .signin__check {
+    animation: none;
+  }
+}
+
 .consent {
   display: grid;
   gap: 8px;
@@ -2037,6 +2131,9 @@ fieldset.panel {
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--saffron);
+  /* Stays inline in the sentence (an inline-block broke the line at 320); vertical padding on an inline
+     box grows its 24px hit area (WCAG 2.5.8) without changing the line height. */
+  padding-block: 2px;
 }
 .field__hint--error {
   color: var(--ink);
@@ -2129,18 +2226,6 @@ fieldset.panel {
 }
 .note--info svg {
   color: var(--camel);
-}
-
-.btn--danger {
-  background: transparent;
-  color: var(--ink);
-  border-color: var(--madder);
-  gap: 6px;
-}
-@media (hover: hover) {
-  .btn--danger:hover {
-    background: var(--madder-soft);
-  }
 }
 
 .tag--alert {
@@ -2394,6 +2479,20 @@ fieldset.panel {
 .people__row {
   flex-wrap: wrap;
 }
+/* Co-host invites on Me: the diwaniya reads first, the two answers sit together and drop under it
+   on narrow phones instead of squeezing the name. */
+.invite {
+  padding-block: 10px;
+}
+.invite__what {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.invite__actions {
+  flex: 0 0 auto;
+  gap: 8px;
+}
 .people__row .link {
   flex: 1 1 auto;
   min-width: 0;
@@ -2496,5 +2595,2005 @@ h2[id] {
   .report-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
+  }
+}
+
+/* ===================== Ali's change list (ADC-LOG-754) ===================== */
+
+/* (1) Area pickers: the native select per area, chosen ping areas as removable chips */
+.area-multi {
+  display: grid;
+  gap: 8px;
+}
+.area-multi__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.area-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-inline-start: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--camel);
+  background: var(--raised);
+  font-size: 0.875rem;
+  animation: fade-up 160ms var(--ease-enter) both;
+}
+.area-chip__x {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.area-chip__x:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -4px;
+}
+
+/* (5) Map: OSM tiles drawn into a clipped box; the pin's point sits on the spot */
+.map {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--hairline);
+  background: var(--raised);
+  isolation: isolate;
+}
+.map--picker {
+  touch-action: none;
+  cursor: crosshair;
+}
+.map--picker:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.map__tiles {
+  position: absolute;
+  inset: 0;
+}
+.map__tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+  user-select: none;
+  pointer-events: none;
+}
+.map__pin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: -34px 0 0 -18px;
+  color: var(--madder);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+  animation: pin-drop 220ms var(--ease-enter) both;
+}
+@keyframes pin-drop {
+  from {
+    opacity: 0;
+    translate: 0 -10px;
+  }
+}
+.map__cross {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 999px;
+  border: 2px solid rgba(21, 17, 26, 0.55);
+  pointer-events: none;
+}
+.map__zoom {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  display: grid;
+  gap: 4px;
+}
+.map__btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.map__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.map__credit {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  margin: 0;
+  padding: 2px 6px;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: #1e1824;
+  background: rgba(255, 250, 244, 0.85);
+  border-start-start-radius: 6px;
+  direction: ltr;
+}
+.map__credit a {
+  color: inherit;
+  /* 24px hit box without moving the line (WCAG 2.5.8), as on the Terms link */
+  display: inline-block;
+  padding-block: 5px;
+  margin-block: -5px;
+}
+.map-picker {
+  display: grid;
+  gap: 8px;
+}
+.pin-card .map {
+  margin-block: 4px 8px;
+}
+
+/* (7) Your night: the actions waiting for you tonight, under the app bar */
+.your-night {
+  display: grid;
+  gap: 8px;
+}
+.your-night__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.your-night__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 1px solid var(--madder);
+  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.5);
+  animation: fade-up 200ms var(--ease-enter) both;
+}
+.your-night__name {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+  min-height: 44px;
+  align-content: center;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 700;
+}
+.your-night__acts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.your-night__acts:empty {
+  display: none;
+}
+.night-card__act {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 0;
+  padding-inline: 4px;
+}
+.card-wrap {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+/* (6) League: My diwaniyas / Season, a two-way switch whose pill slides */
+.seg-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  isolation: isolate;
+}
+.seg-tabs__tab {
+  position: relative;
+  z-index: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 200ms var(--ease-standard);
+}
+.seg-tabs__tab[aria-selected='true'] {
+  color: var(--madder-ink);
+}
+.seg-tabs__tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.seg-tabs__pill {
+  position: absolute;
+  z-index: 0;
+  top: 4px;
+  bottom: 4px;
+  inset-inline-start: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: var(--madder);
+  transform: translateX(calc(var(--i) * 100% * var(--dir)));
+  transition: transform 250ms var(--ease-standard);
+}
+.seg-panel {
+  animation: fade-up 200ms var(--ease-enter) both;
+}
+.mine {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 840px) {
+  .mine {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.mine__item {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+}
+.mine__item--open {
+  border-color: var(--camel);
+}
+.mine__main {
+  display: grid;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.mine__name {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+.mine__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.mine__why {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mine__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.mine__open {
+  font-weight: 500;
+}
+.mine__seats {
+  color: var(--saffron-ink);
+  font-variant-numeric: tabular-nums;
+}
+.mine__act {
+  justify-self: start;
+}
+.season-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+.season-head .field {
+  flex: 1 1 200px;
+  margin: 0;
+}
+.standings__guest {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.tag--quiet {
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  padding: 0 8px;
+}
+
+/* (3)(4) Score: a seat is a person from the room, or a typed walk-in */
+.seat-pick-field {
+  display: grid;
+  gap: 6px;
+}
+.seat-pick-field--dup .input {
+  border-color: var(--madder);
+  box-shadow: 0 0 0 1px var(--madder);
+}
+
+/* (2) Long pages: a jump row of sections, then labelled sections */
+.section-index {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: -8px -20px 0;
+  padding: 8px 20px;
+  background: var(--ground);
+  border-bottom: 1px solid var(--hairline);
+}
+.section-index__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.section-index__list::-webkit-scrollbar {
+  display: none;
+}
+.section-index__btn {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.section-index__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .section-index__btn:hover {
+    border-color: var(--camel);
+  }
+}
+.settings,
+.settings__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.section-index {
+  min-width: 0;
+}
+.settings__fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.settings__section,
+#me-account,
+#me-pings,
+#me-privacy,
+#me-data,
+#me-delete {
+  scroll-margin-top: 72px;
+}
+.panel__title svg {
+  vertical-align: -3px;
+}
+.quick-prefs__grid {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 840px) {
+  .quick-prefs__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+button.link-row {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+button.link-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* (7) Inbox: a waiting request is answered in place */
+.inbox__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 14px;
+  padding-inline-start: 60px;
+  border-radius: 0 0 12px 12px;
+  background: var(--surface);
+}
+.inbox li:has(.inbox__acts) > .inbox__item {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+  background: var(--surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-tabs__pill {
+    transition: none;
+  }
+  .seg-panel,
+  .your-night__item,
+  .area-chip,
+  .map__pin {
+    animation: fade-in 120ms linear both;
+  }
+}
+.mine__item,
+.mine__main {
+  align-content: start;
+}
+
+/* ---------- Ali's change list 2 (ADC-LOG-764) ---------- */
+
+/* (5) Launch: the Diwaniyatna mark draws itself in about 1.3 s, transform and opacity only. */
+.logo-mark__table {
+  fill: var(--raised);
+  stroke: var(--camel);
+  stroke-width: 2;
+}
+.logo-mark__taken {
+  fill: var(--surface);
+  stroke: var(--camel);
+  stroke-width: 2;
+}
+.logo-mark__open {
+  fill: none;
+  stroke: var(--saffron);
+  stroke-width: 2.4;
+  stroke-dasharray: 3.4 2.6;
+}
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  background: var(--ground);
+  animation: splash-in 200ms var(--ease-enter) both;
+}
+.splash--out {
+  animation: splash-out 250ms var(--ease-leave) both;
+}
+.logo-mark--animated .logo-mark__table {
+  transform-origin: 50px 50px;
+  animation: logo-table 360ms var(--ease-enter) both;
+}
+.logo-mark--animated .logo-mark__seat {
+  animation: logo-seat 300ms var(--ease-enter) both;
+  animation-delay: calc(240ms + var(--i) * 70ms);
+}
+.splash__word {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  animation: logo-word 320ms var(--ease-enter) 700ms both;
+}
+@keyframes splash-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes splash-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes logo-table {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes logo-seat {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes logo-word {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Sign-in is the first screen when signed out: no tab bar, no back. */
+.screen--solo {
+  max-width: 560px;
+}
+.appbar--solo {
+  display: grid;
+  /* 1fr (not minmax(0,1fr)): the switch's column never shrinks under the switch, so the centred
+     name gives way on a 320 phone instead of running into it. */
+  grid-template-columns: 1fr auto 1fr;
+  column-gap: 8px;
+  align-items: center;
+}
+.appbar--solo > .appbar__title {
+  grid-column: 2;
+  text-align: center;
+}
+.appbar--solo > .appbar__lang {
+  grid-column: 3;
+  justify-self: end;
+}
+/* Ali's change list 5 item 3: the language switch before sign-in (sign-in, Welcome). */
+.lang-switch {
+  gap: 6px;
+  min-height: 44px;
+}
+
+/* (7) Settings menus: one button per section */
+.menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  overflow: hidden;
+}
+.menu + .menu,
+.menu--guides {
+  margin-top: 16px;
+}
+.menu li + li {
+  border-top: 1px solid var(--hairline);
+}
+.menu-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 12px 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 150ms var(--ease-standard);
+}
+.menu-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+@media (hover: hover) {
+  .menu-row:hover {
+    background: var(--raised);
+  }
+}
+.menu-row:active .menu-row__caret {
+  transform: translateX(calc(3px * var(--dir)));
+}
+.menu-row__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--raised);
+  color: var(--camel);
+}
+.menu-row__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.menu-row__title {
+  font-weight: 600;
+}
+.menu-row__sub {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+.menu-row__caret {
+  color: var(--ink-muted);
+  transition: transform 150ms var(--ease-standard);
+}
+.menu-row--danger .menu-row__icon {
+  color: var(--madder);
+  background: var(--madder-soft);
+}
+.account--menu {
+  margin-bottom: 16px;
+}
+.menu__signout {
+  justify-self: start;
+  margin-top: 16px;
+}
+.settings__name {
+  margin-bottom: 12px;
+}
+
+/* (2) the address with the pin */
+.pin-card__address {
+  display: grid;
+  gap: 2px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* (3) live scoring */
+.score__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.score__head .field {
+  flex: 1 1 220px;
+}
+.score__pack {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+.score__guide {
+  gap: 6px;
+}
+.scoreboard {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.scoreboard__team {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 16px 12px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  text-align: center;
+  transition: border-color 200ms var(--ease-standard);
+}
+.scoreboard__team--lead {
+  border-color: var(--saffron);
+}
+.scoreboard__name {
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scoreboard__who {
+  max-width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+.scoreboard__total {
+  font-size: clamp(2.75rem, 10vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.scoreboard--4 .scoreboard__total {
+  font-size: clamp(2rem, 7vw, 3.25rem);
+}
+.scoreboard__lead {
+  animation: crown-in 300ms var(--ease-enter) both;
+}
+@media (min-width: 600px) {
+  .scoreboard--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.round-form__grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 600px) {
+  .round-form__grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.round-form__cell {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.round-form__who {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.round-form .score__num {
+  min-height: 64px;
+  font-size: clamp(2rem, 7vw, 2.75rem);
+}
+.rounds {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  table-layout: fixed;
+}
+.rounds th {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  font-weight: 600;
+  padding: 6px 4px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--hairline);
+}
+.rounds th:first-child,
+.rounds td:first-child {
+  width: 2.5rem;
+  color: var(--ink-muted);
+}
+.rounds th:last-child,
+.rounds td:last-child {
+  width: 5rem;
+}
+.rounds td {
+  padding: 4px;
+  text-align: center;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 1.125rem;
+}
+.rounds__row {
+  animation: fade-up 200ms var(--ease-enter) both;
+}
+.rounds__row--undone td:not(.rounds__act) {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+}
+.rounds__act .icon-btn {
+  margin-inline: auto;
+}
+.finish {
+  border-color: var(--saffron);
+}
+.finish .segmented {
+  flex-wrap: wrap;
+}
+
+/* (4) game guides */
+.seg-tabs--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.seg-tabs--4 .seg-tabs__pill {
+  width: calc(25% - 2px);
+}
+.guide-views {
+  display: flex;
+  gap: 8px;
+}
+.chip-btn {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-standard), color 150ms var(--ease-standard);
+}
+.chip-btn[aria-pressed='true'] {
+  background: var(--raised);
+  border-color: var(--camel);
+}
+.chip-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.guide {
+  display: grid;
+  gap: 16px;
+  animation: fade-up 200ms var(--ease-enter) both;
+}
+.guide__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.guide__part {
+  display: grid;
+  gap: 8px;
+  padding: 16px 20px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+}
+.guide__h {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--camel);
+}
+.guide__list {
+  margin: 0;
+  padding-inline-start: 1.2em;
+  display: grid;
+  gap: 6px;
+  line-height: 1.6;
+  max-width: 68ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash,
+  .splash--out {
+    animation-duration: 200ms;
+  }
+  .logo-mark--animated .logo-mark__table,
+  .logo-mark--animated .logo-mark__seat,
+  .splash__word {
+    animation: none;
+  }
+  .rounds__row,
+  .guide,
+  .scoreboard__lead {
+    animation: fade-in 120ms linear both;
+  }
+  .menu-row__caret {
+    transition: none;
+  }
+}
+
+/* The screen-in slide on a solo screen (sign-in when signed out) must never widen a phone's layout
+   viewport either (RTL runs past the left edge): clip at the app frame, like .shell does. */
+html,
+#root {
+  overflow-x: clip;
+}
+
+/* Sign-in is the first screen now: on a landscape phone the Google button must sit in the first
+   screen, so the logo (already seen in the launch) steps aside and the bar tightens. */
+@media (orientation: landscape) and (max-height: 499px) {
+  .screen--solo .signin__art {
+    display: none;
+  }
+  .screen--solo .appbar {
+    min-height: 48px;
+  }
+  .screen--solo .screen__body.signin {
+    padding-block-start: 12px;
+    gap: 14px;
+  }
+}
+
+/* ==========================================================================
+   Ali's change list 3 (ADC-LOG-781)
+   ========================================================================== */
+
+/* (6) Remove, cancel, discard, decline, delete: red words, a red outline and an icon, never
+   colour alone. --danger reads at 4.8:1 or better on every surface in both themes. */
+.btn--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1.5px solid var(--danger);
+  gap: 6px;
+}
+.btn--danger svg {
+  color: var(--danger);
+  flex: none;
+}
+@media (hover: hover) {
+  .btn--danger:hover {
+    background: var(--danger-soft);
+    box-shadow: inset 0 0 0 1px var(--danger);
+  }
+}
+.btn--danger:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+.area-chip__x--danger {
+  color: var(--danger);
+}
+
+/* (1) The three-line menu at the top of every page, its badge and its sheet. */
+.appbar > .top-menu {
+  margin-inline-start: auto;
+  position: relative;
+  flex: none;
+}
+.appbar--push > .appbar__title--push {
+  flex: 1 1 auto;
+}
+.appbar--push > .top-menu {
+  margin-inline-start: 0;
+}
+.top-menu__badge {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--saffron);
+  color: var(--on-saffron);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  pointer-events: none;
+}
+.menu-row--button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+.menu-row__count {
+  font-variant-numeric: tabular-nums;
+}
+.menu-row--button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* (2) Messages: the list, a conversation, the writing box. */
+.threads {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+.threads li + li {
+  border-top: 1px solid var(--hairline);
+}
+.thread-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 72px;
+  padding: 12px 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 150ms var(--ease-standard);
+}
+@media (hover: hover) {
+  .thread-row:hover {
+    background: var(--raised);
+  }
+}
+.thread-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.thread-row__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--raised);
+  color: var(--camel);
+}
+.thread-row--unread .thread-row__icon {
+  color: var(--saffron-ink);
+}
+.thread-row__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.thread-row__who {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.thread-row__last {
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.thread-row--unread .thread-row__last {
+  color: var(--ink);
+}
+.thread-row__side {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.chat {
+  display: grid;
+  gap: 12px;
+  max-width: 44rem;
+  width: 100%;
+  margin-inline: auto;
+}
+.chat__safety {
+  margin: 0;
+}
+.chat__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.bubble {
+  justify-self: start;
+  max-width: min(32rem, 86%);
+  padding: 10px 14px 8px;
+  border-radius: 18px;
+  border-end-start-radius: 6px;
+  background: var(--raised);
+  color: var(--ink);
+  animation: bubble-in 220ms var(--ease-enter) both;
+}
+.bubble--mine {
+  justify-self: end;
+  border-end-start-radius: 18px;
+  border-end-end-radius: 6px;
+  background: var(--madder);
+  color: var(--madder-ink);
+}
+.bubble__body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}
+.bubble__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+.bubble__report {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  cursor: pointer;
+}
+.bubble__report:focus-visible {
+  outline: 2px solid var(--focus);
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.chat__closed {
+  align-items: center;
+}
+.composer {
+  position: sticky;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 10px;
+  padding: 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+.composer > p,
+.composer > .note {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.composer__input {
+  min-height: 48px;
+  resize: vertical;
+}
+.composer__send {
+  min-height: 48px;
+}
+.report__quote {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--raised);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+[dir='rtl'] .flip-rtl {
+  transform: scaleX(-1);
+}
+
+/* (3) the Score tab */
+.score-now {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.score-now__lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* (4) the Diwaniya tab on one page: parts, rows you tap to edit, the editor in place. */
+.dw-page {
+  display: grid;
+  gap: 16px;
+}
+.dw-head {
+  display: grid;
+  gap: 8px;
+}
+.dw-head__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.dw-head .place__name {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.dw-part {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  scroll-margin-top: calc(80px + env(safe-area-inset-top));
+}
+.dw-part__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+.dw-part__title svg {
+  color: var(--camel);
+}
+.dw-tonight {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dw-tonight__state {
+  margin: 0;
+}
+.edit-list {
+  display: grid;
+  gap: 0;
+}
+.edit-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 38%) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-standard);
+}
+.edit-list > :last-child,
+.edit-list > :last-child.edit-row {
+  border-bottom: 0;
+}
+.edit-row--static {
+  grid-template-columns: minmax(7rem, 38%) minmax(0, 1fr);
+  cursor: default;
+}
+@media (hover: hover) {
+  button.edit-row:hover {
+    background: var(--raised);
+  }
+}
+.edit-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+.edit-row__label {
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}
+.edit-row__value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.edit-row__long {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+.edit-row__pencil {
+  color: var(--camel);
+}
+.edit-row--open {
+  display: block;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hairline);
+  cursor: default;
+}
+.editor {
+  display: grid;
+  gap: 12px;
+  animation: editor-in 200ms var(--ease-enter) both;
+}
+.editor__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@keyframes editor-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.people-parts {
+  display: grid;
+  gap: 8px;
+}
+.announce,
+.add-table {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+@media (max-width: 359px) {
+  .edit-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .edit-row__label {
+    grid-column: 1 / -1;
+  }
+  .edit-row--static {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .dw-page {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .dw-head,
+  .dw-page > .note,
+
+  .dw-part--wide {
+    grid-column: 1 / -1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bubble,
+  .editor {
+    animation: none;
+  }
+}
+
+.report-card__evidence {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+/* Inside a part of the one Diwaniya page a table is a row, not a card in a card (craft floor). */
+.dw-part .tables {
+  gap: 0;
+}
+.dw-part .table-block {
+  padding: 16px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1px solid var(--hairline);
+}
+.dw-part .tables > li:last-child .table-block,
+.dw-part .tables > .table-block:last-child {
+  border-bottom: 0;
+}
+.dw-part .requests .request:last-child {
+  border-bottom: 0;
+}
+
+/* Ali's change list 4 (ADC-LOG-794) ------------------------------------------------------------ */
+/* (1) Score: chips instead of dropdowns, name boxes, and the room of people to tap. */
+.score-pick {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.score-pick__label,
+.room__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+.score-pick .chip span {
+  white-space: normal;
+  padding-block: 8px;
+}
+.seat-name {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.seat-name__input {
+  padding-inline-end: 80px;
+}
+.seat-name__linked {
+  position: absolute;
+  inset-inline-end: 48px;
+  display: inline-flex;
+  color: var(--saffron);
+  pointer-events: none;
+}
+.seat-name__clear {
+  position: absolute;
+  inset-inline-end: 2px;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.seat-name__clear:hover {
+  color: var(--ink);
+}
+.seat-name__clear:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: -2px;
+}
+.room {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  border: 1px dashed var(--hairline);
+}
+.room p {
+  margin: 0;
+}
+.room__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip--person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 14px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--hairline);
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: transform 150ms var(--ease-standard), border-color 150ms var(--ease-standard);
+}
+.chip--person bdi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip--person:hover:not(:disabled) {
+  border-color: var(--saffron);
+}
+.chip--person:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.chip--person:active {
+  transform: scale(0.96);
+}
+.chip--person:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip--person {
+    transition: none;
+  }
+  .chip--person:active {
+    transform: none;
+  }
+}
+
+/* (3) Diwaniya page: settings at the top of Tonight, dropdowns on the page, one Save at the bottom. */
+.dw-settings {
+  padding-bottom: 8px;
+}
+.dw-night {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hairline);
+}
+.dw-field {
+  display: grid;
+  grid-template-columns: minmax(7rem, 38%) minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 56px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--hairline);
+}
+.dw-field__label {
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}
+.dw-field .input {
+  min-width: 0;
+  max-width: 26rem; /* a choice reads as a control, not a bar across a desktop row */
+}
+.dw-field--changed .input {
+  border-color: var(--saffron);
+}
+.edit-row__end {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.edit-row__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--saffron);
+}
+.dw-save {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  transition: border-color 200ms var(--ease-standard), transform 200ms var(--ease-standard);
+}
+.dw-save--dirty {
+  border-color: var(--saffron);
+}
+/* Points at the one Save while it is out of sight (portalled to body, above the nav). */
+.dw-unsaved {
+  position: fixed;
+  inset-inline: 16px;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 10px);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 560px;
+  min-height: 48px;
+  margin-inline: auto;
+  padding: 8px 16px;
+  border: 1px solid var(--saffron);
+  border-radius: var(--radius-chip);
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
+  cursor: pointer;
+  animation: unsaved-in 220ms var(--ease-enter) both;
+}
+.dw-unsaved__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--saffron-ink);
+}
+.dw-unsaved:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+@keyframes unsaved-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.dw-save__state {
+  margin: 0;
+}
+.dw-save__acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dw-save__acts .btn--primary {
+  min-width: 9rem;
+}
+/* On a phone the dropdown takes the row's full width under its label, so long choices read whole. */
+@media (max-width: 479px) {
+  .dw-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding-block: 10px;
+  }
+}
+@media (max-width: 359px) {
+  .dw-save__acts > * {
+    flex: 1 1 auto;
+  }
+}
+@media (min-width: 1024px) {
+  .dw-save {
+    grid-column: 1 / -1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dw-save {
+    transition: none;
+  }
+  .dw-unsaved {
+    animation: none;
+  }
+}
+
+/* Ali's change list 5 item 1 (ADC-LOG-806): one Filter button; its sheet holds Location and Game. */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.filter-btn {
+  position: relative;
+  flex: none;
+  gap: 8px;
+  min-height: 44px;
+}
+.filter-btn--on {
+  border-color: var(--saffron);
+}
+.filter-btn__badge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--saffron);
+  color: var(--on-saffron);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 22px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  animation: check-in 180ms var(--ease-enter) both;
+}
+.filter-bar__summary {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filter-sheet {
+  display: grid;
+  gap: 20px;
+}
+.filter-sheet__part {
+  display: grid;
+  gap: 12px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.filter-sheet__head {
+  padding: 0;
+  margin-block-end: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.filter-sheet__pick {
+  animation: fade-in 180ms var(--ease-enter) both;
+}
+.filter-sheet__live {
+  margin: 0;
+}
+.filter-sheet__actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  margin-inline: -20px;
+  padding: 12px 20px 4px;
+  background: var(--surface);
+  border-top: 1px solid var(--hairline);
+}
+@media (prefers-reduced-motion: reduce) {
+  .filter-btn__badge,
+  .filter-sheet__pick {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- Diwaniya on the TV: the host's side (ADC-RES-54) */
+.tvroom,
+.tvroom__after {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+.tvroom__after:empty {
+  display: none;
+}
+.tvroom__on {
+  margin-inline-start: 8px;
+}
+.tvroom__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tvroom__acts .btn {
+  gap: 8px;
+}
+.btn--block {
+  width: 100%;
+  gap: 8px;
+}
+.tvcode {
+  display: grid;
+  gap: 12px;
+}
+.tvcode__facts {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--raised);
+}
+.tvcode__facts div {
+  display: grid;
+  gap: 2px;
+}
+.tvcode__facts dt {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+.tvcode__facts dd {
+  margin: 0;
+}
+.tvcode__link {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+[dir='rtl'] .tvcode__link {
+  text-align: end;
+}
+.tvcode__code {
+  font-size: clamp(2.25rem, 12vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  padding-inline-start: 0.22em; /* balances the last letter's tracking so the code sits centred */
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--saffron-ink);
+  text-align: center;
+  animation: tvcode-in 420ms var(--ease-enter);
+}
+@keyframes tvcode-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tvcode__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tvcode__acts .btn,
+.nightcard__acts .btn,
+.draw-add .btn {
+  gap: 8px;
+}
+
+.draw-pick {
+  border: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  min-width: 0;
+}
+.draw-pick__list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.draw-pick__item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--hairline);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 150ms var(--ease-standard), border-color 150ms var(--ease-standard);
+}
+.draw-pick__item input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.draw-pick__box {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--ink-muted);
+  color: transparent;
+  transition: background-color 150ms var(--ease-standard), transform 150ms var(--ease-standard);
+}
+.draw-pick__item:has(input:checked) {
+  background: var(--madder-soft);
+  border-color: var(--madder);
+}
+.draw-pick__item:has(input:checked) .draw-pick__box {
+  background: var(--madder);
+  border-color: var(--madder);
+  color: var(--madder-ink);
+}
+.draw-pick__item:has(input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.draw-add {
+  align-items: end;
+  margin-top: 8px;
+}
+
+.draw-result {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+.draw {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+}
+.draw__table {
+  min-width: 0;
+}
+.draw__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+.draw__seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.draw__seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--raised);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  animation: draw-land 520ms var(--ease-enter) both;
+  animation-delay: calc(var(--i, 0) * 140ms);
+}
+.draw__team {
+  flex: none;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+.draw__seat--t1 {
+  box-shadow: inset 0 0 0 2px var(--madder);
+}
+.draw__seat--t2 {
+  box-shadow: inset 0 0 0 2px var(--camel);
+}
+.draw__seat--t3 {
+  box-shadow: inset 0 0 0 2px var(--saffron);
+}
+.draw__seat--t4 {
+  box-shadow: inset 0 0 0 2px var(--ink-muted);
+}
+.draw__seat--wait {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+@keyframes draw-land {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.nightcard {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  margin: 4px auto 0;
+  border-radius: var(--radius-card);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  animation: tvcode-in 420ms var(--ease-enter);
+}
+.nightcard__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tvcode__code,
+  .draw__seat,
+  .nightcard {
+    animation: none;
+  }
+  .draw-pick__item,
+  .draw-pick__box {
+    transition: none;
   }
 }

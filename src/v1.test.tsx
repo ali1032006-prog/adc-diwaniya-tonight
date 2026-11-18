@@ -189,7 +189,7 @@ describe('Me: delete my account', () => {
     api.listBlocked.mockResolvedValue([]);
     api.amIAdmin.mockResolvedValue(false);
     api.deleteMyAccount.mockResolvedValue(undefined);
-    withAll(<Me />);
+    withAll(<Me section="delete" />);
     const button = (await screen.findByRole('button', { name: en.me.deleteButton })) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     const input = screen.getByLabelText(en.me.deleteType(en.me.deleteWord));

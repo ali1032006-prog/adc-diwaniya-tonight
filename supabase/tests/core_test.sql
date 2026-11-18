@@ -1,4 +1,4 @@
--- Behaviour and access tests for the Diwaniya Tonight core schema
+-- Behaviour and access tests for the Diwaniyatna core schema
 -- (supabase/migrations/20261117182827_core_schema.sql + 20261117192322_signin_men_only.sql). One transaction that always rolls
 -- back. Users are acted out with request.jwt.claims under role authenticated. Visibility checks are
 -- scoped to this test's own diwaniya, so the mock pilot data (supabase/seed/mock_pilot.sql) can stay on dev.
@@ -36,7 +36,7 @@ begin
   exception when insufficient_privilege then null; end;
   begin perform 1 from public.nights limit 1; raise exception 'FAIL: anon read nights';
   exception when insufficient_privilege then null; end;
-  begin perform public.complete_profile('x', 'y', date '1990-01-01', true, true); raise exception 'FAIL: anon RPC';
+  begin perform public.complete_profile('x', 'y', date '1990-01-01', true); raise exception 'FAIL: anon RPC';
   exception when insufficient_privilege then null; end;
   begin perform 1 from public.league_standings limit 1; raise exception 'FAIL: anon read standings';
   exception when insufficient_privilege then null; end;
@@ -55,22 +55,22 @@ declare
 begin
   -- 1. profile: age gate, terms, once-only birth date
   perform pg_temp.act(Y);
-  begin perform public.complete_profile('Young', 'Salmiya', (current_date - interval '16 years')::date, true, true);
+  begin perform public.complete_profile('Young', 'السالمية', (current_date - interval '16 years')::date, true);
     raise exception 'FAIL: under-age profile accepted';
   exception when sqlstate '22023' then null; end;
   perform pg_temp.act(H);
-  begin perform public.complete_profile('Hamad', 'Rawda', date '1980-05-01', false, true);
+  begin perform public.complete_profile('Hamad', 'القيروان', date '1980-05-01', false);
     raise exception 'FAIL: profile without terms accepted';
   exception when sqlstate '22023' then null; end;
-  begin perform public.complete_profile(E'\u0007 ', 'Rawda', date '1980-05-01', true, true);
+  begin perform public.complete_profile(E'\u0007 ', 'القيروان', date '1980-05-01', true);
     raise exception 'FAIL: blank name accepted';
   exception when sqlstate '22023' then null; end;
   foreach u in array array[H, C, G, R, S, B, N] loop
     perform pg_temp.act(u);
-    perform public.complete_profile('P' || right(u::text, 2), 'Rawda', date '1990-01-01', true, true);
+    perform public.complete_profile('P' || right(u::text, 2), 'القيروان', date '1990-01-01', true);
   end loop;
   perform pg_temp.act(G);
-  perform public.complete_profile('Ghanim', 'Jabriya', date '2001-01-01', true, true);
+  perform public.complete_profile('Ghanim', 'الجابرية', date '2001-01-01', true);
   select count(*) into v_cnt from public.profile_private;
   if v_cnt <> 1 then raise exception 'FAIL: saw % private rows', v_cnt; end if;
   if (select birth_date from public.profile_private) <> date '1990-01-01' then
@@ -85,13 +85,15 @@ begin
   -- 2. host builds a diwaniya; nobody else can claim or edit it
   perform pg_temp.act(H);
   insert into public.diwaniyas (host_id, name, area, approval, guest_cap, pin_unlock_minutes, rules)
-    values (H, 'Diwaniya Al-Hamad', 'Rawda', 'regulars_auto', 1, 60, 'No stakes. Tea is on us.') returning id into v_d;
-  begin insert into public.diwaniyas (host_id, name, area) values (G, 'Fake', 'Rawda'); raise exception 'FAIL: diwaniya for someone else';
+    values (H, 'Diwaniya Al-Hamad', 'القيروان', 'regulars_auto', 1, 60, 'No stakes. Tea is on us.') returning id into v_d;
+  begin insert into public.diwaniyas (host_id, name, area) values (G, 'Fake', 'القيروان'); raise exception 'FAIL: diwaniya for someone else';
   exception when insufficient_privilege then null; end;
   insert into public.diwaniya_pins (diwaniya_id, lat, lng, directions) values (v_d, 29.33000, 47.99000, 'Second gate');
   insert into public.cohosts (diwaniya_id, user_id) values (v_d, C);
   insert into public.regulars (diwaniya_id, user_id) values (v_d, R);
   perform set_config('test.d', v_d::text, true);
+  perform pg_temp.act(C);  -- co-hosts are invited and accept (ADC-SEC-18)
+  perform public.accept_cohost(v_d);
 
   perform pg_temp.act(G);
   update public.diwaniyas set name = 'Hijacked' where id = v_d;
@@ -281,7 +283,8 @@ begin
     jsonb_build_object('seat',4,'name','Uncle Saad','team',2,'points',3,'won',false),
     jsonb_build_object('seat',5,'user_id',C,'team',1,'points',6,'won',true),
     jsonb_build_object('seat',6,'name','Walk-in','team',2,'points',3,'won',false)));
-  if (select count(*) from public.league_standings where diwaniya_id = v_d) <> 4 then raise exception 'FAIL: standings rows'; end if;
+  -- 4 accounts + 2 walk-ins: walk-in names count in the league too since ADC-LOG-754 (was 4)
+  if (select count(*) from public.league_standings where diwaniya_id = v_d) <> 6 then raise exception 'FAIL: standings rows'; end if;
   v_j := public.player_stats(G);
   if (v_j->>'games')::int <> 1 or (v_j->>'wins')::int <> 1 or (v_j->>'nights_shown')::int <> 1 then
     raise exception 'FAIL: stats %', v_j; end if;

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { MoonStars, Armchair, Trophy, Tray, UserCircle, type Icon } from '@phosphor-icons/react';
+import { MoonStars, Armchair, Trophy, ChartBar, UserCircle, type Icon } from '@phosphor-icons/react';
 import { TABS, hrefFor, type Tab } from '../lib/router';
 import { usePrefs } from '../lib/prefs';
 
 const ICONS: Record<Tab, Icon> = {
   tonight: MoonStars,
   diwaniya: Armchair,
+  score: ChartBar,
   league: Trophy,
-  inbox: Tray,
   me: UserCircle,
 };
 
@@ -29,8 +29,8 @@ function useReducedMotion(): boolean {
  * windows (CSS decides). A single pill slides to the active tab with transform only; with reduced
  * motion it is re-mounted at the new tab and fades in instead.
  */
-export function NavBar({ active, onReselect, inboxCount = 0 }: { active: Tab; onReselect: (tab: Tab) => void; inboxCount?: number }) {
-  const { t, fmt } = usePrefs();
+export function NavBar({ active, onReselect }: { active: Tab; onReselect: (tab: Tab) => void }) {
+  const { t } = usePrefs();
   const reduced = useReducedMotion();
   const index = TABS.indexOf(active);
   return (
@@ -52,12 +52,6 @@ export function NavBar({ active, onReselect, inboxCount = 0 }: { active: Tab; on
             >
               <span className="nav__icon">
                 <Glyph size={24} weight={current ? 'fill' : 'regular'} aria-hidden="true" />
-                {tab === 'inbox' && inboxCount > 0 && (
-                  <span className="nav__badge">
-                    <span aria-hidden="true">{fmt(Math.min(inboxCount, 99))}</span>
-                    <span className="visually-hidden">{`, ${inboxCount}`}</span>
-                  </span>
-                )}
               </span>
               <span className="nav__label">{t.tabs[tab]}</span>
             </a>

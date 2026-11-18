@@ -4,6 +4,7 @@ import { WovenBand } from './WovenBand';
 import { usePrefs } from '../lib/prefs';
 import { back } from '../lib/router';
 import { SeatRing } from './SeatRing';
+import { TopMenu } from './TopMenu';
 
 /** App bar for a pushed screen: back arrow (mirrored in RTL), title, optional trailing action. */
 export function PushBar({ title, parent, action }: { title: string; parent: string; action?: ReactNode }) {
@@ -19,6 +20,7 @@ export function PushBar({ title, parent, action }: { title: string; parent: stri
           <bdi>{title}</bdi>
         </h1>
         {action}
+        <TopMenu />
       </header>
       <WovenBand className="appbar__band" />
     </>
@@ -78,17 +80,24 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   const ref = useRef<HTMLDialogElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
+  // Mount count: React's StrictMode mounts, unmounts and mounts again in development; the history
+  // entry must survive that (it popped itself and closed the sheet at once).
+  const alive = useRef(0);
   useEffect(() => {
+    alive.current += 1;
     const opener = document.activeElement as HTMLElement | null;
     const d = ref.current;
     if (d && typeof d.showModal === 'function' && !d.open) d.showModal();
     const onPop = () => close.current();
-    window.history.pushState({ sheet: id }, '');
+    if (window.history.state?.sheet !== id) window.history.pushState({ sheet: id }, '');
     window.addEventListener('popstate', onPop);
     return () => {
       window.removeEventListener('popstate', onPop);
-      if (window.history.state?.sheet === id) window.history.back();
-      opener?.focus?.();
+      alive.current -= 1;
+      setTimeout(() => {
+        if (alive.current === 0 && window.history.state?.sheet === id) window.history.back();
+      }, 0);
+      if (alive.current === 0) opener?.focus?.();
     };
   }, [id]);
   return (

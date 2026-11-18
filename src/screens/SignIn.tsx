@@ -1,13 +1,16 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { EnvelopeSimple, LockKey, ShieldCheck } from '@phosphor-icons/react';
 import { PushBar, ErrorNote } from '../components/ui';
-import { SeatRing } from '../components/SeatRing';
+import { LogoMark } from '../components/Logo';
 import { ProfileSetup } from '../components/account';
 import { BirthField, ConsentChecks } from '../components/consent';
 import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
-import { hrefFor, WELCOMED } from '../lib/router';
-import { isAdult, savePendingRegister, startGoogle, takeReturnError } from '../lib/auth';
+import { hrefFor } from '../lib/router';
+import { LINK_ELSEWHERE, LINK_EXPIRED, isAdult, savePendingRegister, startGoogle, takeReturnError } from '../lib/auth';
+import { Divider, EmailRegister, EmailSignIn, ResetRequest } from '../components/EmailAuth';
+
+import { LangSwitch } from '../components/LangSwitch';
 
 /** The official "G" (Google's download bundle, see ASSET-LICENSES.md), never redrawn or recoloured. */
 export function GoogleButton({ label, disabled, busy, busyLabel, onClick }: {
@@ -27,23 +30,27 @@ export function GoogleButton({ label, disabled, busy, busyLabel, onClick }: {
 
 /**
  * S2 Sign in and Register (ADC-RES-50; Ali's rulings A-C, ADC-LOG-696/697): one screen, two tabs.
- * Google is the only way in. Register asks the age (18+), the male confirmation and the Terms
- * first; profile setup after Google asks them again and the server checks them for real.
+ * Google, or an email and a password (Ali's ruling ADC-LOG-802: Supabase's built-in mailer, confirm
+ * email ON, password reset). Register asks the age (18+) and the Terms first for both ways (no male
+ * checkbox, Ali ADC-LOG-751); profile setup asks them again and the server checks them for real.
  */
 export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: string }) {
-  const { c, err } = usePrefs();
+  const { c, t, err } = usePrefs();
   const session = useSession();
   const [tab, setTab] = useState(mode);
   const [birth, setBirth] = useState('');
-  const [male, setMale] = useState(false);
   const [terms, setTerms] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [returned] = useState(() => takeReturnError());
+  const [resetFor, setResetFor] = useState<string | null>(null);
   const ids = { tabs: useId(), a: useId(), b: useId() };
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  useEffect(() => setTab(mode), [mode]);
+  useEffect(() => {
+    setTab(mode);
+    setResetFor(null);
+  }, [mode]);
 
   if (session.status === 'needsProfile') {
     return (
@@ -60,8 +67,7 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
     setError(null);
     setBusy(true);
     try {
-      if (register) savePendingRegister({ birth, male, terms });
-      localStorage.setItem(WELCOMED, '1');
+      if (register) savePendingRegister({ birth, terms });
       await startGoogle(from ? `#/${from}` : '#/tonight');
     } catch (e) {
       setBusy(false);
@@ -69,7 +75,7 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
     }
   };
 
-  const ready = isAdult(birth) && male && terms;
+  const ready = isAdult(birth) && terms;
   const select = (next: 'signin' | 'register', focus = false) => {
     setTab(next);
 
@@ -84,15 +90,22 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
 
   return (
     <>
-      <PushBar title={c.signin.title} parent={hrefFor('me')} />
+      {session.status === 'signedOut' || session.status === 'offline' ? (
+        // The first screen of the app when signed out (ADC-LOG-764 item 5): nothing to go back to.
+        // Ali's change list 5 item 3 (ADC-LOG-806): Arabic / English before signing in.
+        <header className="appbar appbar--solo">
+          <h1 className="appbar__title">
+            <bdi>{t.appName}</bdi>
+          </h1>
+          <LangSwitch className="appbar__lang" />
+        </header>
+      ) : (
+        <PushBar title={c.signin.title} parent={hrefFor('me')} />
+      )}
       <div className="screen__body signin">
         <div className="signin__art" aria-hidden="true">
-          <SeatRing
-            game="kout"
-            seats={[{ initials: 'ب' }, { initials: 'ف' }, { initials: 'س' }, null, { initials: 'ح' }, { initials: 'ج' }]}
-            size={124}
-            decorative
-          />
+          {/* The launch logo lands here, so the splash hands straight over to sign-in. */}
+          <LogoMark size={112} />
         </div>
 
         {session.status === 'ready' && session.profile ? (
@@ -129,13 +142,27 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
               ))}
             </div>
 
-            {returned && <ErrorNote text={c.signin.returnError} />}
+            {returned && (
+              <ErrorNote
+                text={
+                  returned === LINK_ELSEWHERE
+                    ? c.signin.linkElsewhere
+                    : returned === LINK_EXPIRED
+                      ? c.signin.linkExpired
+                      : c.signin.returnError
+                }
+              />
+            )}
 
-            {tab === 'signin' ? (
+            {resetFor !== null ? (
+              <ResetRequest initialEmail={resetFor} onBack={() => setResetFor(null)} />
+            ) : tab === 'signin' ? (
               <section className="panel signin__panel" role="tabpanel" id={ids.a} aria-labelledby={`${ids.tabs}-signin`} key="a">
                 <h2 className="signin__lead">{c.signin.signInLead}</h2>
                 <p className="muted">{c.signin.signInBody}</p>
                 <GoogleButton label={c.signin.google} busy={busy} busyLabel={c.signin.opening} onClick={() => void go_(false)} />
+                <Divider />
+                <EmailSignIn from={from} onForgot={(email) => setResetFor(email)} />
               </section>
             ) : (
               <section className="panel signin__panel" role="tabpanel" id={ids.b} aria-labelledby={`${ids.tabs}-register`} key="b">
@@ -149,7 +176,7 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
                   }}
                 >
                   <BirthField value={birth} onChange={setBirth} />
-                  <ConsentChecks male={male} terms={terms} onMale={setMale} onTerms={setTerms} />
+                  <ConsentChecks terms={terms} onTerms={setTerms} />
                   <GoogleButton
                     label={c.signin.googleUp}
                     disabled={!ready}
@@ -158,6 +185,8 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
                     onClick={() => void go_(true)}
                   />
                 </form>
+                <Divider />
+                <EmailRegister ready={ready} from={from} onBeforeSend={() => savePendingRegister({ birth, terms })} />
               </section>
             )}
 

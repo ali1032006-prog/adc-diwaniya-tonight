@@ -1,5 +1,6 @@
 // S2 Sign in and Register + S3 profile setup (ADC-TSK-36 sign-in slice).
-// Ali's rulings ADC-LOG-696/697: A Google only, B 18+, C men only (male confirmation, Terms say it).
+// Ali's rulings ADC-LOG-696/697: A Google only, B 18+, C men only (the Terms say it). No male
+// checkbox since Ali's order ADC-LOG-751.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { PrefsContext, DEFAULT_PREFS, type Prefs } from './lib/prefs';
@@ -123,11 +124,14 @@ describe('routes', () => {
 });
 
 describe('S2 Sign in and Register', () => {
-  it('has no email or password form anywhere (ruling A)', () => {
+  it('offers email and password next to Google on both tabs (ADC-LOG-802)', () => {
     const { container } = ui(<SignIn mode="signin" />);
-    expect(container.querySelector('input[type=password], input[type=email]')).toBeNull();
+    expect(screen.getByRole('button', { name: en.signin.google })).toBeTruthy();
+    expect(container.querySelector('input[type=email][autocomplete=email]')).not.toBeNull();
+    expect(container.querySelector('input[type=password][autocomplete=current-password]')).not.toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: en.signin.tabRegister }));
-    expect(container.querySelector('input[type=password], input[type=email]')).toBeNull();
+    expect(screen.getByRole('button', { name: en.signin.googleUp })).toBeTruthy();
+    expect(container.querySelector('input[type=password][autocomplete=new-password]')).not.toBeNull();
   });
 
   it('Sign in goes straight to Google with the account chooser', async () => {
@@ -139,28 +143,31 @@ describe('S2 Sign in and Register', () => {
       options: { redirectTo: window.location.origin + window.location.pathname, queryParams: { prompt: 'select_account' } },
     });
     expect(sessionStorage.getItem('dt.after-signin.v1')).toBe('#/league');
-    expect(localStorage.getItem('dt.welcomed.v1')).toBe('1');
+    // Welcome now plays after sign-in (ADC-LOG-764 item 5), so starting Google no longer skips it.
+    expect(localStorage.getItem('dt.welcomed.v1')).toBeNull();
   });
 
-  it('Register keeps Google shut until 18+, male and Terms are all given', async () => {
+  it('Register keeps Google shut until 18+ and the Terms are given, and asks nothing else', async () => {
     const { container } = ui(<SignIn mode="register" />);
     const google = screen.getByRole('button', { name: en.signin.googleUp });
     expect((google as HTMLButtonElement).disabled).toBe(true);
+    // Ali's order ADC-LOG-751: the Terms are the only checkbox.
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+    expect(screen.queryByText(/I confirm I am a man/)).toBeNull();
     const date = container.querySelector('input[type=date]') as HTMLInputElement;
     fireEvent.change(date, { target: { value: yearsAgo(17) } });
     expect(screen.getByText(en.profile.tooYoung)?.getAttribute('class')).toBe('field__hint field__hint--error');
     expect(date?.getAttribute('aria-invalid')).toBe('true');
-    fireEvent.click(screen.getByRole('checkbox', { name: en.profile.male }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Terms and Privacy Policy/ }));
     expect((google as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(date, { target: { value: yearsAgo(30) } });
     expect((google as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(screen.getByRole('checkbox', { name: en.profile.male }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Terms and Privacy Policy/ }));
     expect((google as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole('checkbox', { name: en.profile.male }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Terms and Privacy Policy/ }));
     fireEvent.click(google);
     await waitFor(() => expect(oauth).toHaveBeenCalledTimes(1));
-    expect(auth.pendingRegister()).toEqual({ birth: yearsAgo(30), male: true, terms: true });
+    expect(auth.pendingRegister()).toEqual({ birth: yearsAgo(30), terms: true });
   });
 
   it('the Terms link opens in a new tab so the form is kept', () => {
@@ -197,27 +204,27 @@ describe('S2 Sign in and Register', () => {
 });
 
 describe('S3 profile setup', () => {
-  it('fills in what Register collected and sends the male confirmation', async () => {
-    auth.savePendingRegister({ birth: '1990-04-04', male: true, terms: true });
+  it('fills in what Register collected and sends no male confirmation', async () => {
+    auth.savePendingRegister({ birth: '1990-04-04', terms: true });
     const refresh = vi.fn(async () => {});
     ui(<ProfileSetup />, { status: 'needsProfile', userId: 'u1', refresh });
     fireEvent.change(screen.getByLabelText(en.profile.name), { target: { value: 'Faisal' } });
-    fireEvent.change(screen.getByLabelText(en.profile.area, { exact: false }), { target: { value: 'Salmiya' } });
-    expect((screen.getByRole('checkbox', { name: en.profile.male }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.change(screen.getByLabelText(en.profile.area, { exact: false }), { target: { value: 'السالمية' } });
+    expect((screen.getByRole('checkbox', { name: /Terms and Privacy Policy/ }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: en.profile.finish }));
-    await waitFor(() => expect(api.completeProfile).toHaveBeenCalledWith('Faisal', 'Salmiya', '1990-04-04', true, true));
+    await waitFor(() => expect(api.completeProfile).toHaveBeenCalledWith('Faisal', 'السالمية', '1990-04-04', true));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(auth.pendingRegister()).toBeNull();
   });
 
-  it('cannot start without the male confirmation', () => {
+  it('starts with name, area, 18+ and the Terms, and has no male checkbox', () => {
     const { container } = ui(<ProfileSetup />, { status: 'needsProfile', userId: 'u1' });
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
     fireEvent.change(screen.getByLabelText(en.profile.name), { target: { value: 'Faisal' } });
-    fireEvent.change(screen.getByLabelText(en.profile.area, { exact: false }), { target: { value: 'Salmiya' } });
+    fireEvent.change(screen.getByLabelText(en.profile.area, { exact: false }), { target: { value: 'السالمية' } });
     fireEvent.change(container.querySelector('input[type=date]') as HTMLInputElement, { target: { value: '1990-04-04' } });
-    fireEvent.click(screen.getByRole('checkbox', { name: /Terms and Privacy Policy/ }));
     expect((screen.getByRole('button', { name: en.profile.finish }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole('checkbox', { name: en.profile.male }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Terms and Privacy Policy/ }));
     expect((screen.getByRole('button', { name: en.profile.finish }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

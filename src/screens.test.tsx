@@ -90,7 +90,7 @@ afterEach(cleanup);
 describe('router (slice 3 routes)', () => {
   it('parses pushed screens by uuid and refuses malformed ids', () => {
     expect(parseHash(`#/d/${DW}`)).toEqual({ name: 'place', id: DW });
-    expect(parseHash(`#/settings/${DW}`)).toEqual({ name: 'settings', id: DW });
+    expect(parseHash(`#/settings/${DW}`)).toEqual({ name: 'diwaniya', id: DW }); // retired into the one Diwaniya page
     expect(parseHash(`#/player/${ME}`)).toEqual({ name: 'player', id: ME });
     expect(parseHash(`#/score/${DW}?table=${T1}`)).toEqual({ name: 'score', id: DW, table: T1 });
     expect(parseHash(`#/score/${DW}?table=nope`)).toEqual({ name: 'score', id: DW });
@@ -98,22 +98,22 @@ describe('router (slice 3 routes)', () => {
     expect(parseHash('#/d/<script>')).toEqual({ name: 'tonight' });
   });
   it('keeps the pill on the tab a pushed screen came from', () => {
-    expect(tabOf({ name: 'place', id: DW }, 'inbox')).toBe('inbox');
+    expect(tabOf({ name: 'place', id: DW }, 'diwaniya')).toBe('diwaniya');
     expect(tabOf({ name: 'place', id: DW }, 'league')).toBe('tonight');
-    expect(tabOf({ name: 'settings', id: DW })).toBe('diwaniya');
+    expect(tabOf({ name: 'diwaniya', id: DW })).toBe('diwaniya');
     expect(tabOf({ name: 'player', id: ME }, 'me')).toBe('league');
   });
 });
 
 describe('pure helpers', () => {
-  it('counts open seats and filters nights by game and open seats', () => {
+  it('counts open seats and filters nights by game (the open-seats option left with ADC-LOG-794 item 4)', () => {
     const full = table({ id: 'full', game: 'baloot', seat_count: 4, seats: [1, 2, 3, 4].map((n) => ({ seat_no: n, user_id: null, walk_in_name: 'x' })) });
     expect(openSeats(full)).toBe(0);
     const a = night({ id: 'a', tables: [full] });
     const b = night({ id: 'b', tables: [table()] });
-    expect(filterNights([a, b], [], true).map((n) => n.id)).toEqual(['b']);
-    expect(filterNights([a, b], ['baloot'], false).map((n) => n.id)).toEqual(['a']);
-    expect(filterNights([a, b], ['trix'], false)).toEqual([]);
+    expect(filterNights([a, b], []).map((n) => n.id)).toEqual(['a', 'b']);
+    expect(filterNights([a, b], ['baloot']).map((n) => n.id)).toEqual(['a']);
+    expect(filterNights([a, b], ['trix'])).toEqual([]);
   });
   it('builds ring seats in seat order with mine marked', () => {
     const t = table({ seat_count: 4, game: 'baloot', seats: [{ seat_no: 3, user_id: ME, walk_in_name: null, profile: { display_name: 'Faisal Ali' } }] });
@@ -139,9 +139,9 @@ describe('pure helpers', () => {
   });
   it('ranks the season by wins, then win rate, then fewer games', () => {
     const rows: Standing[] = [
-      { diwaniya_id: DW, user_id: 'a', name: 'A', played: 10, wins: 5 },
-      { diwaniya_id: DW, user_id: 'b', name: 'B', played: 6, wins: 5 },
-      { diwaniya_id: DW, user_id: 'c', name: 'C', played: 3, wins: 7 },
+      { diwaniya_id: DW, user_id: 'a', name: 'A', played: 10, wins: 5, player_key: 'a' },
+      { diwaniya_id: DW, user_id: 'b', name: 'B', played: 6, wins: 5, player_key: 'b' },
+      { diwaniya_id: DW, user_id: 'c', name: 'C', played: 3, wins: 7, player_key: 'c' },
     ];
     expect(rankStandings(rows).map((r) => r.user_id)).toEqual(['c', 'b', 'a']);
   });
@@ -183,9 +183,12 @@ describe('pure helpers', () => {
 });
 
 describe('screens', () => {
-  it('Tonight signed out teaches and never calls the API', () => {
+  it('Tonight signed out shows the sign-in gate and never calls the API', () => {
     withAll(<Tonight />, { ...ready, status: 'signedOut', userId: null, profile: null, priv: null });
-    expect(screen.getByRole('heading', { name: 'No open seats near you tonight' })).toBeTruthy();
+    // Vi's 1/3 note still holds: signed out it must not claim there are no seats. (The shell sends a
+    // signed-out visit to sign-in first, ADC-LOG-764 item 5; this is the fallback if Tonight renders.)
+    expect(screen.getByRole('link', { name: 'Sign in' })).toBeTruthy();
+    expect(screen.queryByText('No open seats near you tonight')).toBeNull();
     expect(api.listTonight).not.toHaveBeenCalled();
   });
   it('Tonight lists open nights with their seat rings and filters by game', async () => {
@@ -202,7 +205,11 @@ describe('screens', () => {
     expect(screen.getByRole('img', { name: 'Kout table: 0 of 6 seats taken, 6 seats open' })).toBeTruthy();
     expect(screen.getByText('One short')).toBeTruthy();
     expect(screen.getByText('2 diwaniyas open tonight')).toBeTruthy();
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Baloot' }));
+    // Games are picked in the Filter sheet now (Ali's change list 5, ADC-LOG-806); jsdom keeps the
+    // dialog closed (no showModal), hence hidden: true.
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Baloot', hidden: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply', hidden: true }));
     expect(screen.queryByText('Diwaniya Al-Bahar')).toBeNull();
     expect(screen.getByText('1 diwaniya open tonight')).toBeTruthy();
     expect(screen.getByRole('link', { name: /Baloot House/ }).getAttribute('href')).toBe('#/d/d2');
@@ -236,7 +243,7 @@ describe('screens', () => {
     api.listFollowed.mockResolvedValue([]);
     withAll(<Board />);
     expect(await screen.findByRole('heading', { name: 'Open your diwaniya' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Create diwaniya' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeTruthy();
   });
   it('Inbox marks an item read when it is opened', async () => {
     api.listInbox.mockResolvedValue([

@@ -12,8 +12,8 @@ function arOpen(open: number, fmt: Fmt): string {
 }
 
 const ar = {
-  appName: 'ديوانية الليلة',
-  tabs: { tonight: 'الليلة', diwaniya: 'الديوانية', league: 'الدوري', inbox: 'الوارد', me: 'حسابي' },
+  appName: 'ديوانيتنا',
+  tabs: { tonight: 'الليلة', diwaniya: 'الديوانية', score: 'النقاط', league: 'الدوري', me: 'حسابي' },
   navLabel: 'التنقل الرئيسي',
   games: { kout: 'كوت', baloot: 'بلوت', tarneeb: 'طرنيب', trix: 'تركس' },
   seatRing: (game: string, taken: number, total: number, open: number, fmt: Fmt) =>
@@ -36,7 +36,7 @@ const ar = {
     title: 'الدوري',
     emptyTitle: 'سجّل أول لعبة لتبدأ الموسم',
     emptyBody: 'كل نتيجة تُسجَّل من أي جوال تدخل جدول الديوانية، ولا تضيع إن ضاع الجوال.',
-    score: 'سجّل لعبة',
+    score: 'النقاط',
   },
   inbox: {
     title: 'الوارد',
@@ -64,7 +64,7 @@ const ar = {
       { title: 'اطلب المقعد، والمضيف يوافق', body: 'العنوان الدقيق لا يظهر إلا لمن وافق عليه المضيف.' },
       { title: 'دوري الديوانية محفوظ للجميع', body: 'النتائج والنجوم والشهر، من أي جوال.' },
     ],
-    lookAround: 'تصفّح الليلة',
+    start: 'يلّا نبدأ',
     next: 'التالي',
     language: 'English',
   },
@@ -73,8 +73,8 @@ const ar = {
 type Strings = typeof ar;
 
 const en: Strings = {
-  appName: 'Diwaniya Tonight',
-  tabs: { tonight: 'Tonight', diwaniya: 'Diwaniya', league: 'League', inbox: 'Inbox', me: 'Me' },
+  appName: 'Diwaniyatna',
+  tabs: { tonight: 'Tonight', diwaniya: 'Diwaniya', score: 'Score', league: 'League', me: 'Me' },
   navLabel: 'Main navigation',
   games: { kout: 'Kout', baloot: 'Baloot', tarneeb: 'Tarneeb', trix: 'Trix' },
   seatRing: (game, taken, total, open, fmt) =>
@@ -97,7 +97,7 @@ const en: Strings = {
     title: 'League',
     emptyTitle: 'Score your first game to start the season',
     emptyBody: "Every result scored from any phone lands in the diwaniya's table, and stays if a phone is lost.",
-    score: 'Score a game',
+    score: 'Score',
   },
   inbox: {
     title: 'Inbox',
@@ -125,7 +125,7 @@ const en: Strings = {
       { title: 'Ask for the seat, the host approves', body: 'The exact address shows only to guests the host approved.' },
       { title: "The diwaniya's league, kept for everyone", body: 'Results, stars and the monthly crown, from any phone.' },
     ],
-    lookAround: 'Look around tonight',
+    start: "Let's start",
     next: 'Next',
     language: 'العربية',
   },

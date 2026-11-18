@@ -1,4 +1,4 @@
-/* Own illustrations for empty states, drawn for Diwaniya Tonight (see ASSET-LICENSES.md). */
+/* Own illustrations for empty states, drawn for Diwaniyatna (see ASSET-LICENSES.md). */
 
 /** A dallah coffee pot pouring into a finjan: the host's welcome, used on Inbox. */
 export function DallahArt() {

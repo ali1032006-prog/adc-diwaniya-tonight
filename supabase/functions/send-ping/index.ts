@@ -8,7 +8,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const HOOK_SECRET = Deno.env.get('PUSH_HOOK_SECRET') ?? '';
 webpush.setVapidDetails(
-  Deno.env.get('VAPID_SUBJECT') ?? 'https://adc-diwaniya-tonight.pages.dev',
+  Deno.env.get('VAPID_SUBJECT') ?? 'https://adc-diwaniyatna.pages.dev',
   Deno.env.get('VAPID_PUBLIC_KEY') ?? '',
   Deno.env.get('VAPID_PRIVATE_KEY') ?? '',
 );
@@ -33,6 +33,7 @@ const TEXT: Record<Lang, Record<string, (d: string, extra: string) => [string, s
     declined: (d) => [`لم يُقبل طلبك`, `اعتذر المضيف في ${d} هذه المرة.`],
     no_show: (d) => [`سُجّل غياب`, `سجّل مضيف ${d} أنك لم تحضر.`],
     announcement: (d, b) => [`إعلان من ${d}`, b],
+    message: (d) => [`رسالة جديدة`, `وصلتك رسالة عن ${d}. افتح الرسائل لتقرأها.`],
   },
   en: {
     need_one: (d, g) => [`One short at ${d}`, `The ${g} table needs a player tonight. Ask for the seat.`],
@@ -43,6 +44,7 @@ const TEXT: Record<Lang, Record<string, (d: string, extra: string) => [string, s
     declined: (d) => [`Not this time`, `The host at ${d} declined this time.`],
     no_show: (d) => [`No-show marked`, `The host at ${d} marked you as not coming.`],
     announcement: (d, b) => [`From ${d}`, b],
+    message: (d) => [`New message`, `You have a message about ${d}. Open Messages to read it.`],
   },
 };
 
@@ -75,6 +77,7 @@ export function inQuietHours(start: string | null, end: string | null, now = new
 
 function target(kind: string, diwaniya: string | null): string {
   if (kind === 'request' || kind === 'auto_approved' || kind === 'cancelled') return '/#/diwaniya';
+  if (kind === 'message') return '/#/messages';
   return diwaniya && UUID.test(diwaniya) ? `/#/d/${diwaniya}` : '/#/inbox';
 }
 
@@ -102,7 +105,7 @@ Deno.serve(async (req) => {
     const subs: { id: string; endpoint: string; p256dh: string; auth: string }[] = await rest(
       `push_subscriptions?user_id=eq.${item.user_id}&select=id,endpoint,p256dh,auth`,
     );
-    const name = item.diwaniya?.name ?? (lang === 'ar' ? 'ديوانية الليلة' : 'Diwaniya Tonight');
+    const name = item.diwaniya?.name ?? (lang === 'ar' ? 'ديوانيتنا' : 'Diwaniyatna');
     const make = TEXT[lang][item.kind];
     if (!make) return Response.json({ sent: 0, skipped: 'kind' });
     const extra = item.kind === 'announcement' ? String(item.body ?? '').slice(0, 300) : GAME[lang][item.tbl?.game ?? ''] ?? '';

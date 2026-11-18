@@ -56,7 +56,7 @@ declare
 begin
   foreach u in array array[H, G, A, R1, R2, R3, P, Q, X] loop
     perform pg_temp.act(u);
-    perform public.complete_profile('V' || right(u::text, 2), 'Qurtuba', date '1990-01-01', true, true);
+    perform public.complete_profile('V' || right(u::text, 2), 'Qurtuba', date '1990-01-01', true);
   end loop;
 
   -- 1. push subscriptions: RPC only, push-service hosts only, own rows only, 10 devices at most
@@ -91,15 +91,15 @@ begin
 
   -- 2. host opens a night in a unique area; G follows; P opted in to kout here, Q elsewhere
   perform pg_temp.act(H);
-  insert into public.diwaniyas (host_id, name, area) values (H, 'Diwaniya V1 Test', 'V1-Testarea') returning id into v_d;
+  insert into public.diwaniyas (host_id, name, area) values (H, 'Diwaniya V1 Test', 'الخيران') returning id into v_d;
   insert into public.nights (diwaniya_id, starts_at) values (v_d, now() + interval '2 hours') returning id into v_n;
   insert into public.game_tables (night_id, game, seat_count) values (v_n, 'kout', 6) returning id into v_t;
   perform pg_temp.act(G);
   insert into public.follows (user_id, diwaniya_id) values (G, v_d);
   perform pg_temp.act(P);
-  update public.profile_private set ping_games = '{kout}', ping_areas = '{" v1-testarea "}' where user_id = P;
+  update public.profile_private set ping_games = '{kout}', ping_areas = '{" الخيران "}' where user_id = P;
   perform pg_temp.act(Q);
-  update public.profile_private set ping_games = '{kout}', ping_areas = '{Jahra}' where user_id = Q;
+  update public.profile_private set ping_games = '{kout}', ping_areas = '{الجهراء}' where user_id = Q;
 
   -- 3. need one: followers and opted-in area players, once per 30 minutes
   perform pg_temp.act(H);
@@ -148,8 +148,11 @@ begin
   begin perform public.announce(v_n, 'sixth'); raise exception 'FAIL: sixth announcement';
   exception when sqlstate '54000' then null; end;
 
-  -- 5. partner / rival stats: H and G beat R1 and X
+  -- 5. partner / rival stats: H and G beat R1 and X (R1 approved tonight, X a regular: games name
+  --    only people who were really there, ADC-SEC-18)
   perform pg_temp.act(H);
+  perform public.decide_request((select id from public.requests where night_id = v_n and user_id = R1), true);
+  insert into public.regulars (diwaniya_id, user_id) values (v_d, X);
   perform public.record_game(v_d, 'kout_bo4', v_t, jsonb_build_array(
     jsonb_build_object('seat', 1, 'user_id', H, 'name', 'h', 'team', 1, 'points', 152, 'won', true),
     jsonb_build_object('seat', 2, 'user_id', R1, 'name', 'r', 'team', 2, 'points', 80, 'won', false),
@@ -192,7 +195,10 @@ begin
   exception when sqlstate '42501' then null; end;
   if public.am_i_admin() then raise exception 'FAIL: G is admin'; end if;
 
-  -- 7. three different people reporting holds the diwaniya from everyone else
+  -- 7. three different linked people reporting holds the diwaniya from everyone else (R2, R3
+  --    regulars; G and R1 approved there; ADC-SEC-20)
+  perform pg_temp.act(H);
+  insert into public.regulars (diwaniya_id, user_id) values (v_d, R2), (v_d, R3);
   perform pg_temp.act(R1); insert into public.reports (target_diwaniya, reason) values (v_d, 'fake');
   perform pg_temp.act(R1); insert into public.reports (target_diwaniya, reason) values (v_d, 'fake');
   reset role;
@@ -267,7 +273,7 @@ begin
   if exists (select 1 from public.diwaniyas where id = v_d) then raise exception 'FAIL: hidden person''s diwaniya visible'; end if;
   perform pg_temp.act(H);
   if not exists (select 1 from public.profiles where id = H) then raise exception 'FAIL: hidden person can''t see himself'; end if;
-  begin insert into public.diwaniyas (host_id, name, area) values (H, 'Again', 'x'); raise exception 'FAIL: hidden person hosted';
+  begin insert into public.diwaniyas (host_id, name, area) values (H, 'Again', 'الروضة'); raise exception 'FAIL: hidden person hosted';
   exception when insufficient_privilege then null; end;
   perform pg_temp.act(A);
   if not exists (select 1 from public.profiles where id = H) then raise exception 'FAIL: admin can''t see hidden person'; end if;

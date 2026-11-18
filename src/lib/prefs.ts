@@ -32,6 +32,19 @@ export function savePrefs(p: Prefs, storage: Pick<Storage, 'setItem'> = localSto
   storage.setItem(KEY, JSON.stringify(p));
 }
 
+const KEYS = ['lang', 'numerals', 'theme'] as const;
+
+/**
+ * What the account must change to match this device (ADC-LOG-794 item 2). The device's choice
+ * always wins: the account's copy is only a record of it (for pings and the next phone), never
+ * a value that is written back over what the person picked here.
+ */
+export function prefsDiff(device: Prefs, account: Pick<Prefs, 'lang' | 'numerals' | 'theme'>): Partial<Prefs> {
+  const out: Partial<Prefs> = {};
+  for (const k of KEYS) if (device[k] !== account[k]) (out as Record<string, string>)[k] = device[k];
+  return out;
+}
+
 export interface PrefsCtx {
   prefs: Prefs;
   setPrefs: (p: Partial<Prefs>) => void;
@@ -45,9 +58,17 @@ export function errorText(e: unknown, c: Copy): string {
   if (code === 'offline' || (e instanceof TypeError && /fetch/i.test(e.message))) return c.errors.offline;
   if (code === '28000' || code === 'PGRST301') return c.errors.signIn;
   if (code === 'P0002' || code === 'PGRST116') return c.errors.notFound;
+  const msg = e instanceof ApiError ? e.message : '';
+  if (/under review/i.test(msg)) return c.errors.underReview;
+  if (/not taking messages/i.test(msg)) return c.errors.notTaking;
+  if (/cannot message each other/i.test(msg)) return c.errors.cannotMessage;
   if (code === '42501') return c.errors.forbidden;
   if (code === '23514') return c.errors.cap;
+  if (code === '54000' && /this night/i.test(msg)) return c.errors.nightTries;
+  if (code === '54000' && /wait a few minutes/i.test(msg)) return c.errors.slowDown;
+  if (code === '54000' && /host to answer/i.test(msg)) return c.errors.waitHost;
   if (code === '54000') return c.errors.limit;
+  if (code === '22023' && /not at this diwaniya/i.test(msg)) return c.errors.notThere;
   if (code === '23505') return c.errors.duplicate;
   if (code === '22023' || code === '22P02' || code === '23502') return c.errors.invalid;
   return c.errors.unknown;

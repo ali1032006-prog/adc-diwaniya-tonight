@@ -1,4 +1,4 @@
--- Mock pilot data for Diwaniya Tonight (Ali's ruling F, ADC-LOG-697: "come up with a mock yourself").
+-- Mock pilot data for Diwaniyatna (Ali's ruling F, ADC-LOG-697: "come up with a mock yourself").
 -- No real diwaniyas, people or addresses: every name here is made up, every pin is a rough point in
 -- the named area, and every "about" says it is sample data. Dev project only.
 --
@@ -77,8 +77,8 @@ from m_dw d join m_people p on p.n = d.host;
 insert into public.diwaniya_pins (diwaniya_id, lat, lng, directions)
 select id, lat, lng, 'موقع تقريبي تجريبي' from m_dw;
 
-insert into public.cohosts (diwaniya_id, user_id)
-select d.id, p.id from m_dw d join m_people p on p.n = 6 where d.k = 1;
+insert into public.cohosts (diwaniya_id, user_id, accepted_at)
+select d.id, p.id, now() from m_dw d join m_people p on p.n = 6 where d.k = 1;
 
 insert into public.regulars (diwaniya_id, user_id)
 select d.id, p.id from m_dw d join m_people p on (d.k, p.n) in ((1,6),(1,7),(1,10),(2,8),(2,12),(3,9),(4,11),(4,7),(5,10),(5,1));

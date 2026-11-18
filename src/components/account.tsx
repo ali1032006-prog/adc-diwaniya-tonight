@@ -8,6 +8,7 @@ import { useAction } from '../lib/useAsync';
 import { completeProfile, openSeats, type TableRow } from '../lib/api';
 import { currentFrom, go, href, hrefFor } from '../lib/router';
 import { clearPendingRegister, isAdult, pendingRegister } from '../lib/auth';
+import { AreaSelect } from './AreaSelect';
 import { BirthField, ConsentChecks } from './consent';
 
 /** A table's seats in ring order, open ones as null, mine marked. */
@@ -57,8 +58,8 @@ export function SignInGate() {
 }
 
 /**
- * S3 profile setup: name and area, plus the age (18+, ruling B), the male confirmation (ruling C)
- * and the Terms. What the Register tab collected before Google is filled in; the server checks all of it.
+ * S3 profile setup: name and area, plus the age (18+, ruling B) and the Terms (which say the app is
+ * for men only, ruling C; no separate male checkbox since ADC-LOG-751). What the Register tab collected before Google is filled in; the server checks all of it.
  */
 export function ProfileSetup() {
   const { c, err } = usePrefs();
@@ -68,9 +69,8 @@ export function ProfileSetup() {
   const [name, setName] = useState('');
   const [area, setArea] = useState('');
   const [birth, setBirth] = useState(pending?.birth ?? '');
-  const [male, setMale] = useState(pending?.male ?? false);
   const [terms, setTerms] = useState(pending?.terms ?? false);
-  const ready = name.trim() !== '' && area.trim() !== '' && isAdult(birth) && male && terms;
+  const ready = name.trim() !== '' && area.trim() !== '' && isAdult(birth) && terms;
   return (
     <section className="panel" aria-labelledby="setup-t">
       <h2 id="setup-t" className="panel__title panel__title--ink">
@@ -83,7 +83,7 @@ export function ProfileSetup() {
           e.preventDefault();
           if (!ready) return;
           void act.run(async () => {
-            await completeProfile(name, area, birth, terms, male);
+            await completeProfile(name, area, birth, terms);
             clearPendingRegister();
             await refresh();
             // S4 comes right after profile setup (ADC-RES-50 nav map); back returns here.
@@ -95,10 +95,10 @@ export function ProfileSetup() {
           <input className="input" required maxLength={40} value={name} onChange={(e) => setName(e.target.value)} autoComplete="nickname" />
         </Field>
         <Field label={c.profile.area} hint={c.profile.areaHint}>
-          <input className="input" required maxLength={60} value={area} onChange={(e) => setArea(e.target.value)} />
+          <AreaSelect required value={area} onChange={setArea} />
         </Field>
         <BirthField value={birth} onChange={setBirth} />
-        <ConsentChecks male={male} terms={terms} onMale={setMale} onTerms={setTerms} />
+        <ConsentChecks terms={terms} onTerms={setTerms} />
         {act.error != null && <ErrorNote text={err(act.error)} />}
         <button className="btn btn--primary" disabled={act.busy || !ready}>
           {c.profile.finish}

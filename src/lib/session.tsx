@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { supabase } from './supabase';
 import { getMe, type Profile, type ProfilePrivate } from './api';
-import { finishReturn } from './auth';
+import { finishReturn, noteLinkWithoutSession } from './auth';
 
 export type SessionStatus = 'loading' | 'offline' | 'signedOut' | 'needsProfile' | 'ready';
 
@@ -14,6 +14,9 @@ export interface SessionCtx {
   priv: ProfilePrivate | null;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** True after a password-reset link signed this browser in: the app asks for a new password first. */
+  recovery?: boolean;
+  endRecovery?: () => void;
 }
 
 const noop = async () => {};
@@ -33,8 +36,8 @@ export function useSession() {
 }
 
 /**
- * Holds the Supabase session and the signed-in person's profile. Sign-in is Google only (ruling A);
- * getSession waits for the client to swap Google's one-time code, then the address bar is tidied.
+ * Holds the Supabase session and the signed-in person's profile. Google or email + password; getSession
+ * waits for the client to swap the one-time ?code= (Google, confirm or reset link), then the address bar is tidied.
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const client = supabase();
@@ -48,13 +51,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   });
   // One profile load at a time: the first getSession and onAuthStateChange race on open.
   const inflight = useRef<Promise<void> | null>(null);
+  // A reset link comes back as ?reset=1&code=... (sendPasswordReset); supabase-js also fires
+  // PASSWORD_RECOVERY for it. Either one opens the new-password step.
+  const [recovery, setRecovery] = useState(() => new URLSearchParams(window.location.search).get('reset') === '1');
 
   const load = useCallback(async () => {
     if (!client) return;
     if (inflight.current) return inflight.current;
     inflight.current = (async () => {
       try {
+        const hadCode = new URLSearchParams(window.location.search).has('code');
         const { data } = await client.auth.getSession();
+        noteLinkWithoutSession(hadCode, Boolean(data.session));
+        if (!data.session) setRecovery(false);
         finishReturn();
         const user = data.session?.user;
         if (!user) {
@@ -83,7 +92,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!client) return;
     void load();
     const { data } = client.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') void load();
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') void load();
     });
     return () => data.subscription.unsubscribe();
   }, [client, load]);
@@ -93,6 +103,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await load();
   }, [client, load]);
 
-  const value = useMemo(() => ({ ...state, refresh: load, signOut }), [state, load, signOut]);
+  const endRecovery = useCallback(() => setRecovery(false), []);
+  const value = useMemo(
+    () => ({ ...state, refresh: load, signOut, recovery, endRecovery }),
+    [state, load, signOut, recovery, endRecovery],
+  );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

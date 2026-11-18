@@ -34,22 +34,14 @@ export function BirthField({ value, onChange }: { value: string; onChange: (v: s
 }
 
 /**
- * The two consents every account gives (ruling C and the Terms). The Terms link opens in a new tab
- * so nothing typed here is lost.
+ * The consent every account gives: the Terms (which say diwaniyas here are for men only, ruling C).
+ * There is no separate male confirmation any more (Ali, ADC-LOG-751). The Terms link opens in a new
+ * tab so nothing typed here is lost.
  */
-export function ConsentChecks({ male, terms, onMale, onTerms }: {
-  male: boolean;
-  terms: boolean;
-  onMale: (v: boolean) => void;
-  onTerms: (v: boolean) => void;
-}) {
+export function ConsentChecks({ terms, onTerms }: { terms: boolean; onTerms: (v: boolean) => void }) {
   const { c } = usePrefs();
   return (
     <div className="consent">
-      <label className="check">
-        <input type="checkbox" required checked={male} onChange={(e) => onMale(e.target.checked)} />
-        <span>{c.profile.male}</span>
-      </label>
       <label className="check">
         <input type="checkbox" required checked={terms} onChange={(e) => onTerms(e.target.checked)} />
         <span>

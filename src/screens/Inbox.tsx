@@ -1,13 +1,12 @@
-import { Bell, CheckCircle, Lightning, XCircle, UserPlus, Warning, Prohibit, Megaphone } from '@phosphor-icons/react';
+import { Bell, CheckCircle, Lightning, XCircle, UserPlus, Warning, Prohibit, Megaphone, UserGear, ShieldWarning, X } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
-import { Screen } from './Tabs';
 import { EmptyState } from '../components/EmptyState';
 import { DallahArt } from '../components/Art';
 import { NeedsAccount } from '../components/account';
-import { ErrorNote, Skeleton } from '../components/ui';
+import { ErrorNote, PushBar, Skeleton } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 import { useAction, useAsync } from '../lib/useAsync';
-import { listInbox, markRead, type InboxKind, type InboxRow } from '../lib/api';
+import { decideRequest, listInbox, markRead, requestStatuses, type InboxKind, type InboxRow } from '../lib/api';
 import { href, hrefFor } from '../lib/router';
 
 const ICON: Record<InboxKind, Icon> = {
@@ -19,40 +18,54 @@ const ICON: Record<InboxKind, Icon> = {
   need_one: Lightning,
   no_show: Warning,
   announcement: Megaphone,
+  cohost_invite: UserGear,
+  held: ShieldWarning,
 };
 
 /** Where an inbox item leads: hosts to their board, guests to the diwaniya page. */
 export function inboxTarget(i: Pick<InboxRow, 'kind' | 'diwaniya_id'>): string {
   if (i.kind === 'request' || i.kind === 'auto_approved' || i.kind === 'cancelled') return hrefFor('diwaniya');
+  if (i.kind === 'cohost_invite') return hrefFor('me');
+  if (i.kind === 'held') return hrefFor('admin');
   return i.diwaniya_id ? href.place(i.diwaniya_id) : hrefFor('tonight');
 }
 
-/** S13 Inbox: requests, approvals, 'need one' pings and no-show marks, newest first. */
+/** S13 Inbox, opened from the top menu (Ali's change list 3, item 1): requests, approvals, pings, newest first. */
 export function Inbox() {
   const { t } = usePrefs();
   return (
-    <Screen title={t.inbox.title}>
-      <NeedsAccount>
-        <InboxBody />
-      </NeedsAccount>
-    </Screen>
+    <>
+      <PushBar title={t.inbox.title} parent={hrefFor('tonight')} />
+      <div className="screen__body">
+        <NeedsAccount>
+          <InboxBody />
+        </NeedsAccount>
+      </div>
+    </>
   );
 }
 
 function InboxBody() {
   const { t, c, fmt, time, date, err } = usePrefs();
-  const items = useAsync(listInbox, [], ['inbox']);
+  // Requests that still wait get Approve / Decline right here (fewer taps, ADC-LOG-754 item 7).
+  const items = useAsync(async () => {
+    const list = await listInbox();
+    const ids = list.filter((i) => i.kind === 'request' && i.request_id).map((i) => i.request_id!);
+    const waiting = await requestStatuses(ids).catch(() => new Map());
+    return { list, waiting };
+  }, [], ['inbox', 'requests']);
   const act = useAction();
   if (items.loading && !items.data) return <Skeleton rows={3} />;
   if (items.error != null && !items.data) return <ErrorNote text={err(items.error)} onRetry={items.reload} />;
-  const list = items.data ?? [];
+  const list = items.data?.list ?? [];
+  const waiting = items.data?.waiting ?? new Map();
   if (list.length === 0) {
     return (
       <EmptyState
         art={<DallahArt />}
         title={t.inbox.emptyTitle}
         body={t.inbox.emptyBody}
-        actions={[{ label: t.inbox.enable, href: hrefFor('me'), primary: true }]}
+        actions={[{ label: t.inbox.enable, href: href.me('pings'), primary: true }]}
       />
     );
   }
@@ -97,7 +110,7 @@ function InboxBody() {
                   <Glyph size={22} weight="fill" aria-hidden="true" />
                 </span>
                 <span className="inbox__text">
-                  <bdi>{c.inbox.kinds[i.kind](i.diwaniya?.name ?? t.appName)}</bdi>
+                  <bdi>{c.inbox.kinds[i.kind](i.diwaniya?.name ?? (i.kind === 'held' && i.body ? i.body : t.appName))}</bdi>
                   {i.kind === 'announcement' && i.body && (
                     <bdi className="inbox__body">{i.body}</bdi>
                   )}
@@ -106,6 +119,41 @@ function InboxBody() {
                   </span>
                 </span>
               </a>
+              {i.kind === 'request' && i.request_id && waiting.get(i.request_id) === 'pending' && (
+                <div className="inbox__acts">
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--small"
+                    disabled={act.busy}
+                    aria-label={`${c.board.approve} · ${i.diwaniya?.name ?? ''} · ${time(i.created_at)}`}
+                    onClick={() =>
+                      void act.run(async () => {
+                        await decideRequest(i.request_id!, true);
+                        if (!i.read_at) await markRead([i.id]);
+                        items.reload();
+                      })
+                    }
+                  >
+                    {c.board.approve}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--danger btn--small"
+                    disabled={act.busy}
+                    aria-label={`${c.board.decline} · ${i.diwaniya?.name ?? ''} · ${time(i.created_at)}`}
+                    onClick={() =>
+                      void act.run(async () => {
+                        await decideRequest(i.request_id!, false);
+                        if (!i.read_at) await markRead([i.id]);
+                        items.reload();
+                      })
+                    }
+                  >
+                    <X size={16} aria-hidden="true" />
+                    {c.board.decline}
+                  </button>
+                </div>
+              )}
             </li>
           );
         })}

@@ -38,6 +38,8 @@ export interface Diwaniya extends DiwaniyaLite {
   approval: 'host' | 'regulars_auto';
   guest_cap: number;
   pin_unlock_minutes: number;
+  /** Guests may write to the host (Ali's change list 3, item 2); only the host switches it. */
+  messages_on: boolean;
   host?: { display_name: string } | null;
 }
 export interface NightRow {
@@ -70,7 +72,8 @@ export interface Profile {
 export interface ProfilePrivate {
   birth_date: string;
   terms_accepted_at: string;
-  male_confirmed_at: string;
+  /** Only on accounts made before ADC-LOG-751 removed the checkbox; kept, never asked again. */
+  male_confirmed_at: string | null;
   lang: 'ar' | 'en';
   numerals: 'auto' | 'arab' | 'latn';
   theme: 'auto' | 'night' | 'day';
@@ -80,7 +83,17 @@ export interface ProfilePrivate {
   quiet_end: string | null;
   ping_daily_cap: number;
 }
-export type InboxKind = 'request' | 'approved' | 'declined' | 'auto_approved' | 'cancelled' | 'need_one' | 'no_show' | 'announcement';
+export type InboxKind =
+  | 'request'
+  | 'approved'
+  | 'declined'
+  | 'auto_approved'
+  | 'cancelled'
+  | 'need_one'
+  | 'no_show'
+  | 'announcement'
+  | 'cohost_invite'
+  | 'held';
 export interface InboxRow {
   id: string;
   kind: InboxKind;
@@ -95,10 +108,13 @@ export interface InboxRow {
 }
 export interface Standing {
   diwaniya_id: string;
-  user_id: string;
+  /** null for a walk-in: he has no account, so the league keeps him by name. */
+  user_id: string | null;
   name: string;
   played: number;
   wins: number;
+  /** The user id, or 'guest:<lower name>' for a walk-in (league_standings, ADC-LOG-754). */
+  player_key: string;
 }
 export interface PlayedGame {
   id: string;
@@ -147,7 +163,7 @@ const SEATS = 'seats(seat_no,user_id,walk_in_name,profile:profiles(display_name)
 const QUEUE = 'queue:table_queue(user_id,joined_at,profile:profiles(display_name))';
 const TABLES = `tables:game_tables(id,game,seat_count,label,queue_mode,need_one,${SEATS},${QUEUE})`;
 const DW_LITE = 'id,name,area,usual_slot,host_id,visibility';
-const DW_FULL = `${DW_LITE},about,rules,approval,guest_cap,pin_unlock_minutes,host:profiles!diwaniyas_host_id_fkey(display_name)`;
+const DW_FULL = `${DW_LITE},about,rules,approval,guest_cap,pin_unlock_minutes,messages_on,host:profiles!diwaniyas_host_id_fkey(display_name)`;
 
 function sortTables(n: NightRow): NightRow {
   return { ...n, tables: [...(n.tables ?? [])].sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id)) };
@@ -164,15 +180,14 @@ export async function getMe(): Promise<{ profile: Profile | null; priv: ProfileP
   return { profile: unwrap(p) as Profile | null, priv: unwrap(q) as ProfilePrivate | null };
 }
 
-/** S3: the server checks 18+ (ruling B) and the male confirmation (ruling C) again; the form only helps. */
-export async function completeProfile(name: string, area: string, birthDate: string, acceptTerms: boolean, confirmMale: boolean) {
+/** S3: the server checks 18+ (ruling B) and the Terms again; the form only helps. No male checkbox (ADC-LOG-751). */
+export async function completeProfile(name: string, area: string, birthDate: string, acceptTerms: boolean) {
   unwrap(
     await db().rpc('complete_profile', {
       p_name: name,
       p_area: area,
       p_birth_date: birthDate,
       p_accept_terms: acceptTerms,
-      p_confirm_male: confirmMale,
     }),
   );
 }
@@ -199,7 +214,13 @@ export async function exportMyData(): Promise<Record<string, unknown>> {
     requests: await pick('requests', 'user_id'),
     follows: await pick('follows', 'user_id'),
     blocks: await pick('blocks', 'blocker_id'),
-    reports: await pick('reports', 'reporter_id'),
+    // Only the columns a reporter may read (ADC-SEC-19): never who reviewed it or the admin's note.
+    reports: unwrap(
+      await db()
+        .from('reports')
+        .select('id,target_user,target_diwaniya,target_label,reason,details,status,created_at,reviewed_at')
+        .eq('reporter_id', me),
+    ),
     inbox: await pick('inbox', 'user_id'),
     push_devices: unwrap(await db().from('push_subscriptions').select('endpoint,created_at,last_ok_at').eq('user_id', me)),
   };
@@ -255,12 +276,19 @@ export async function getMyRequest(nightId: string): Promise<RequestRow | null> 
   return rows[0] ?? null;
 }
 
-export async function getPin(diwaniyaId: string): Promise<{ lat: number; lng: number; directions: string } | null> {
-  return unwrap(await db().from('diwaniya_pins').select('lat,lng,directions').eq('diwaniya_id', diwaniyaId).maybeSingle());
+export interface Pin {
+  lat: number;
+  lng: number;
+  directions: string;
+  /** Written address (ADC-LOG-764 item 2), read exactly like the pin. */
+  address: string;
+}
+export async function getPin(diwaniyaId: string): Promise<Pin | null> {
+  return unwrap(await db().from('diwaniya_pins').select('lat,lng,directions,address').eq('diwaniya_id', diwaniyaId).maybeSingle());
 }
 
-export async function setPin(diwaniyaId: string, lat: number, lng: number, directions: string) {
-  unwrap(await db().from('diwaniya_pins').upsert({ diwaniya_id: diwaniyaId, lat, lng, directions }));
+export async function setPin(diwaniyaId: string, lat: number, lng: number, directions: string, address = '') {
+  unwrap(await db().from('diwaniya_pins').upsert({ diwaniya_id: diwaniyaId, lat, lng, directions, address }));
 }
 
 export async function isFollowing(diwaniyaId: string): Promise<boolean> {
@@ -324,7 +352,7 @@ export async function myDiwaniyas(): Promise<Diwaniya[]> {
   const me = await uid();
   const [own, co] = await Promise.all([
     db().from('diwaniyas').select(DW_FULL).eq('host_id', me).order('created_at'),
-    db().from('cohosts').select(`diwaniya:diwaniyas(${DW_FULL})`).eq('user_id', me),
+    db().from('cohosts').select(`diwaniya:diwaniyas(${DW_FULL})`).eq('user_id', me).not('accepted_at', 'is', null),
   ]);
   const a = unwrap(own) as unknown as Diwaniya[];
   const b = (unwrap(co) as unknown as { diwaniya: Diwaniya | null }[]).map((r) => r.diwaniya).filter((d): d is Diwaniya => !!d);
@@ -338,7 +366,7 @@ export async function createDiwaniya(name: string, area: string) {
 
 export type DiwaniyaSettings = Pick<
   Diwaniya,
-  'name' | 'area' | 'about' | 'rules' | 'visibility' | 'approval' | 'guest_cap' | 'pin_unlock_minutes' | 'usual_slot'
+  'name' | 'area' | 'about' | 'rules' | 'visibility' | 'approval' | 'guest_cap' | 'pin_unlock_minutes' | 'usual_slot' | 'messages_on'
 >;
 export async function updateDiwaniya(id: string, s: Partial<DiwaniyaSettings>) {
   unwrap(await db().from('diwaniyas').update(s).eq('id', id));
@@ -412,12 +440,35 @@ export async function removeRegular(diwaniyaId: string, userId: string) {
 
 export async function listCohosts(diwaniyaId: string) {
   return unwrap(
-    await db().from('cohosts').select('user_id,profile:profiles(display_name)').eq('diwaniya_id', diwaniyaId),
-  ) as unknown as { user_id: string; profile: { display_name: string } | null }[];
+    await db().from('cohosts').select('user_id,accepted_at,profile:profiles(display_name)').eq('diwaniya_id', diwaniyaId),
+  ) as unknown as { user_id: string; accepted_at: string | null; profile: { display_name: string } | null }[];
 }
 
+/** Invites the host sends; the person becomes a co-host only when he accepts (ADC-SEC-18). */
 export async function addCohost(diwaniyaId: string, userId: string) {
   unwrap(await db().from('cohosts').insert({ diwaniya_id: diwaniyaId, user_id: userId }));
+}
+
+export type CohostInvite = { diwaniya_id: string; invited_at: string; diwaniya: { name: string; area: string } | null };
+export async function myCohostInvites(): Promise<CohostInvite[]> {
+  const me = await uid();
+  return unwrap(
+    await db()
+      .from('cohosts')
+      .select('diwaniya_id,invited_at,diwaniya:diwaniyas(name,area)')
+      .eq('user_id', me)
+      .is('accepted_at', null)
+      .order('invited_at', { ascending: false }),
+  ) as unknown as CohostInvite[];
+}
+
+export async function acceptCohost(diwaniyaId: string) {
+  unwrap(await db().rpc('accept_cohost', { p_diwaniya: diwaniyaId }));
+}
+
+export async function declineCohost(diwaniyaId: string) {
+  const me = await uid();
+  unwrap(await db().from('cohosts').delete().eq('diwaniya_id', diwaniyaId).eq('user_id', me));
 }
 
 export async function removeCohost(diwaniyaId: string, userId: string) {
@@ -438,9 +489,110 @@ export async function undoGame(gameId: string) {
 
 export async function standings(diwaniyaId: string): Promise<Standing[]> {
   const rows = unwrap(
-    await db().from('league_standings').select('diwaniya_id,user_id,name,played,wins').eq('diwaniya_id', diwaniyaId),
+    await db().from('league_standings').select('diwaniya_id,user_id,name,played,wins,player_key').eq('diwaniya_id', diwaniyaId),
   ) as Standing[];
   return rankStandings(rows);
+}
+
+/** People a scorer may name at this diwaniya (and table): linked by account instead of typed. */
+export interface RosterPerson {
+  id: string;
+  name: string;
+  seat: number | null;
+}
+export async function scoreRoster(diwaniyaId: string, tableId: string | null): Promise<RosterPerson[]> {
+  return ((unwrap(await db().rpc('score_roster', { p_diwaniya: diwaniyaId, p_table: tableId })) as RosterPerson[]) ?? []);
+}
+
+// ---------------------------------------------------------------- live scoring (ADC-LOG-764 item 3)
+export interface SheetPlayer {
+  seat: number;
+  user_id: string | null;
+  name: string;
+  team: number;
+}
+export interface ScoreSheet {
+  id: string;
+  diwaniya_id: string;
+  table_id: string | null;
+  rule_pack: RulePack;
+  teams: number;
+  players: SheetPlayer[];
+  started_by: string;
+  status: 'open' | 'finished' | 'discarded';
+  game_id: string | null;
+  created_at: string;
+}
+export interface ScoreRound {
+  round_no: number;
+  points: number[];
+  added_by: string | null;
+  created_at: string;
+  undone_at: string | null;
+}
+const SHEET = 'id,diwaniya_id,table_id,rule_pack,teams,players,started_by,status,game_id,created_at';
+
+/** The open sheet for this table (or my own table-less one), so a refresh picks the game up again. */
+export async function openSheet(diwaniyaId: string, tableId: string | null, me: string | null): Promise<ScoreSheet | null> {
+  let q = db().from('score_sheets').select(SHEET).eq('diwaniya_id', diwaniyaId).eq('status', 'open');
+  q = tableId ? q.eq('table_id', tableId) : q.is('table_id', null).eq('started_by', me ?? '');
+  const rows = unwrap(await q.order('created_at', { ascending: false }).limit(1)) as ScoreSheet[];
+  return rows[0] ?? null;
+}
+export async function getSheet(id: string): Promise<{ sheet: ScoreSheet | null; rounds: ScoreRound[] }> {
+  const [sheet, rounds] = await Promise.all([
+    db().from('score_sheets').select(SHEET).eq('id', id).maybeSingle(),
+    db().from('score_rounds').select('round_no,points,added_by,created_at,undone_at').eq('sheet_id', id).order('round_no'),
+  ]);
+  return { sheet: unwrap(sheet) as ScoreSheet | null, rounds: (unwrap(rounds) as ScoreRound[]) ?? [] };
+}
+export async function startScore(diwaniyaId: string, pack: RulePack, tableId: string | null, players: SheetPlayer[]) {
+  return unwrap(await db().rpc('start_score', { p_diwaniya: diwaniyaId, p_rule_pack: pack, p_table: tableId, p_players: players })) as string;
+}
+export async function addRound(sheetId: string, points: number[]) {
+  return unwrap(await db().rpc('add_round', { p_sheet: sheetId, p_points: points })) as number;
+}
+export async function undoRound(sheetId: string, round: number) {
+  unwrap(await db().rpc('undo_round', { p_sheet: sheetId, p_round: round }));
+}
+export async function discardScore(sheetId: string) {
+  unwrap(await db().rpc('discard_score', { p_sheet: sheetId }));
+}
+export async function finishScore(sheetId: string, winner: number) {
+  return unwrap(await db().rpc('finish_score', { p_sheet: sheetId, p_winner: winner })) as string;
+}
+/** Running totals per team from the rounds still standing. */
+export function sheetTotals(teams: number, rounds: ScoreRound[]): number[] {
+  const out = Array.from({ length: teams }, () => 0);
+  for (const r of rounds) if (!r.undone_at) r.points.forEach((p, i) => (out[i] = (out[i] ?? 0) + p));
+  return out;
+}
+
+/** My diwaniyas (S11 tab inside League, item 6): followed, regular, visited or requested tonight, with tonight's state. */
+export interface MyDiwaniya {
+  id: string;
+  name: string;
+  area: string;
+  visibility: 'public' | 'followers';
+  why: ('follow' | 'regular' | 'visit' | 'tonight')[];
+  night_id: string | null;
+  starts_at: string | null;
+  open_seats: number | null;
+  need_one: boolean | null;
+  my_status: RequestStatus | null;
+  my_request: string | null;
+  my_table: string | null;
+  seated_table: string | null;
+}
+export async function myDiwaniyaList(): Promise<MyDiwaniya[]> {
+  return ((unwrap(await db().rpc('my_diwaniyas')) as MyDiwaniya[]) ?? []);
+}
+
+/** Status of request rows (Inbox shows Approve/Decline only while a request still waits). */
+export async function requestStatuses(ids: string[]): Promise<Map<string, RequestStatus>> {
+  if (ids.length === 0) return new Map();
+  const rows = unwrap(await db().from('requests').select('id,status').in('id', ids)) as { id: string; status: RequestStatus }[];
+  return new Map(rows.map((r) => [r.id, r.status]));
 }
 
 /** Most wins first, then the better win rate, then fewer games, then name. */
@@ -474,10 +626,10 @@ export function monthlyCrown(games: PlayedGame[], now = new Date()): string[] {
   return top === 0 ? [] : [...wins].filter(([, w]) => w === top).map(([n]) => n).sort();
 }
 
-/** Diwaniyas whose league I can open: ones I run, follow, or have played at. */
-export async function leagueDiwaniyas(): Promise<DiwaniyaLite[]> {
-  const [mine, followed] = await Promise.all([myDiwaniyas(), listFollowed()]);
-  const all = [...mine, ...followed];
+/** Diwaniyas whose league I can open: ones I run, follow, am a regular of, or have played at. */
+export async function leagueDiwaniyas(): Promise<{ id: string; name: string }[]> {
+  const [mine, others] = await Promise.all([myDiwaniyas(), myDiwaniyaList()]);
+  const all = [...mine, ...others].map((d) => ({ id: d.id, name: d.name }));
   return all.filter((d, i) => all.findIndex((x) => x.id === d.id) === i);
 }
 
@@ -527,13 +679,14 @@ export async function listInbox(): Promise<InboxRow[]> {
     await db()
       .from('inbox')
       .select('id,kind,body,diwaniya_id,night_id,request_id,table_id,created_at,read_at,diwaniya:diwaniyas(name)')
+      .neq('kind', 'message') // message pings belong to Messages, counted there
       .order('created_at', { ascending: false })
       .limit(80),
   ) as unknown as InboxRow[];
 }
 
 export async function unreadCount(): Promise<number> {
-  const r = await db().from('inbox').select('id', { count: 'exact', head: true }).is('read_at', null);
+  const r = await db().from('inbox').select('id', { count: 'exact', head: true }).is('read_at', null).neq('kind', 'message');
   if (r.error) throw new ApiError(r.error.code ?? 'unknown', r.error.message);
   return r.count ?? 0;
 }
@@ -621,6 +774,10 @@ export interface QueueItem {
   reviewed_at: string | null;
   review_note: string;
   target_label: string;
+  /** The reporter has a real link to the target (ADC-SEC-20); only these count toward a hold. */
+  counts_to_hold?: boolean;
+  /** The reported message, kept word for word (Ali's change list 3, item 2). */
+  evidence?: string;
   reporter: { id: string | null; name: string | null };
   target_user: { id: string; name: string; hidden_at: string | null; held_at: string | null; open_reports: number } | null;
   target_diwaniya: { id: string; name: string; area: string; hidden_at: string | null; held_at: string | null; open_reports: number } | null;
@@ -660,6 +817,90 @@ export async function adminSummary(): Promise<AdminSummary> {
   return unwrap(await db().rpc('admin_summary')) as AdminSummary;
 }
 
+// ---------------------------------------------------------------- messages to hosts (Ali's change list 3, item 2)
+
+export interface ThreadSummary {
+  id: string;
+  diwaniya_id: string;
+  diwaniya_name: string;
+  last_at: string;
+  role: 'host' | 'guest';
+  other_id: string;
+  other_name: string;
+  last_body: string | null;
+  last_mine: boolean | null;
+  unread: number;
+  /** A block either way: the thread stays readable, nobody can write. */
+  blocked: boolean;
+  /** False when the diwaniya stopped taking messages (the host can still answer). */
+  open: boolean;
+}
+export interface MessageRow {
+  id: string;
+  seq: number;
+  thread_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+}
+export const MESSAGE_MAX = 1000;
+
+export async function myThreads(): Promise<ThreadSummary[]> {
+  return ((unwrap(await db().rpc('my_threads')) as ThreadSummary[]) ?? []);
+}
+export async function threadMessages(threadId: string): Promise<MessageRow[]> {
+  return (unwrap(
+    await db().from('messages').select('id,seq,thread_id,sender_id,body,created_at,read_at').eq('thread_id', threadId).order('seq').limit(500),
+  ) as MessageRow[]) ?? [];
+}
+/** The thread I already have with this diwaniya's host, if any (RLS: only mine are visible). */
+export async function threadWith(diwaniyaId: string): Promise<string | null> {
+  const me = await uid();
+  const rows = unwrap(
+    await db().from('message_threads').select('id').eq('diwaniya_id', diwaniyaId).eq('guest_id', me).limit(1),
+  ) as { id: string }[];
+  return rows[0]?.id ?? null;
+}
+export async function startThread(diwaniyaId: string, body: string): Promise<string> {
+  return unwrap(await db().rpc('start_thread', { p_diwaniya: diwaniyaId, p_body: body })) as string;
+}
+export async function sendMessage(threadId: string, body: string): Promise<string> {
+  return unwrap(await db().rpc('send_message', { p_thread: threadId, p_body: body })) as string;
+}
+export async function markThreadRead(threadId: string) {
+  unwrap(await db().rpc('mark_thread_read', { p_thread: threadId }));
+}
+export async function unreadMessages(): Promise<number> {
+  return (unwrap(await db().rpc('unread_messages')) as number) ?? 0;
+}
+export async function reportMessage(messageId: string, reason: ReportReason, details: string) {
+  unwrap(await db().rpc('report_message', { p_message: messageId, p_reason: reason, p_details: details }));
+}
+
+// ---------------------------------------------------------------- Score tab (item 3)
+
+export interface ScoreTarget {
+  diwaniya_id: string;
+  name: string;
+  table_id: string | null;
+  game: Game | null;
+  seat_count: number | null;
+  label: string;
+  starts_at: string | null;
+  /** seated: his own table; here: checked in tonight; host: he runs it; regular: a regular there. */
+  why: 'seated' | 'here' | 'host' | 'regular';
+}
+export interface ScoreTargets {
+  targets: ScoreTarget[];
+  /** Why there is nothing to score: approved (sit first), pending (host hasn't answered), none. */
+  reason: 'approved' | 'pending' | 'none' | null;
+}
+export async function scoreTargets(): Promise<ScoreTargets> {
+  const r = unwrap(await db().rpc('score_targets')) as ScoreTargets | null;
+  return { targets: r?.targets ?? [], reason: r?.reason ?? null };
+}
+
 // ---------------------------------------------------------------- live updates
 
 /** Re-run `onChange` whenever one of the named tables changes (Realtime honours RLS). Returns the unsubscribe. */
@@ -672,4 +913,62 @@ export function subscribe(name: string, tables: string[], onChange: () => void):
   return () => {
     void c.removeChannel(ch);
   };
+}
+
+// ---------------------------------------------------------------- Diwaniya on the TV (ADC-RES-54, ADC-LOG-817)
+/** The TV room for tonight's night: the 6-letter code the TV types in, and when it stops working. */
+export interface TvRoom {
+  code: string;
+  expires_at: string;
+}
+export async function tvCurrent(nightId: string): Promise<TvRoom | null> {
+  return (unwrap(await db().rpc('tv_current', { p_night: nightId })) as TvRoom | null) ?? null;
+}
+export async function tvOpen(nightId: string): Promise<TvRoom> {
+  return unwrap(await db().rpc('tv_open', { p_night: nightId })) as TvRoom;
+}
+export async function tvNewCode(nightId: string): Promise<TvRoom> {
+  return unwrap(await db().rpc('tv_new_code', { p_night: nightId })) as TvRoom;
+}
+export async function tvRevoke(nightId: string): Promise<number> {
+  return unwrap(await db().rpc('tv_revoke', { p_night: nightId })) as number;
+}
+
+/** Tonight's draw: a fair shuffle made on the server, shown on the phone and the TV. */
+export interface DrawSeat {
+  seat: number;
+  name: string;
+  team: number;
+}
+export interface DrawTable {
+  label: string;
+  game: Game | null;
+  seats: DrawSeat[];
+}
+export interface Draw {
+  no: number;
+  at: string;
+  tables: DrawTable[];
+  waiting: string[];
+}
+export async function tvDraw(nightId: string, names: string[]): Promise<Draw> {
+  return unwrap(await db().rpc('tv_draw', { p_night: nightId, p_names: names })) as Draw;
+}
+
+/** The end-of-night card: the managers and anyone who was at that night get it; null for others. */
+export interface NightCard {
+  name: string;
+  area: string;
+  starts_at: string;
+  open: boolean;
+  games: number;
+  players: number;
+  list: { rule_pack: RulePack; at: string; winners: string[]; losers: string[] }[];
+  top: { name: string; wins: number; played: number }[];
+  me: { played: number; wins: number } | null;
+  crown: string[];
+  host: boolean;
+}
+export async function nightCard(diwaniyaId: string): Promise<NightCard | null> {
+  return (unwrap(await db().rpc('night_card', { p_diwaniya: diwaniyaId })) as NightCard | null) ?? null;
 }

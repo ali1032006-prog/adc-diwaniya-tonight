@@ -1,4 +1,4 @@
-/* Diwaniya Tonight service worker: pings only (no offline cache in v1).
+/* Diwaniyatna service worker: pings only (no offline cache in v1).
    Every push shows a notification (WebKit drops subscriptions that push silently). */
 'use strict';
 
@@ -15,7 +15,7 @@ self.addEventListener('push', (event) => {
     data = {};
   }
   const ar = data.lang !== 'en';
-  const title = typeof data.title === 'string' && data.title ? data.title.slice(0, 120) : ar ? 'ديوانية الليلة' : 'Diwaniya Tonight';
+  const title = typeof data.title === 'string' && data.title ? data.title.slice(0, 120) : ar ? 'ديوانيتنا' : 'Diwaniyatna';
   const body = typeof data.body === 'string' ? data.body.slice(0, 300) : '';
   const url = typeof data.url === 'string' && SAFE_URL.test(data.url) ? data.url : '/#/inbox';
   event.waitUntil(

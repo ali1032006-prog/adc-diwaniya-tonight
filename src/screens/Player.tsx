@@ -84,7 +84,7 @@ function PlayerBody({ id }: { id: string }) {
               disabled={act.busy}
               onClick={() => void act.run(async () => {
                 await addCohost(d.id, profile.id);
-                setNotice(c.common.saved);
+                setNotice(c.player.invited);
               })}
             >
               <UserGear size={18} aria-hidden="true" />
