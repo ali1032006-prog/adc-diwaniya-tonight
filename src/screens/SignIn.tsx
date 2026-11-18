@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useId, useRef, useState } from 'react';
 import { EnvelopeSimple, LockKey, ShieldCheck } from '@phosphor-icons/react';
 import { PushBar, ErrorNote } from '../components/ui';
 import { LogoMark } from '../components/Logo';
@@ -8,6 +8,11 @@ import { usePrefs } from '../lib/prefs';
 import { useSession } from '../lib/session';
 import { hrefFor } from '../lib/router';
 import { isAdult, savePendingRegister, startGoogle, takeReturnError } from '../lib/auth';
+
+// Preview builds only (ADC-LOG-775): __PREVIEW_SIGNIN__ is a build-time constant (vite.config.ts).
+// In `npm run build` it is the literal false, so this import is compiled away and the test form's
+// module is never emitted; scripts/check_prod_bundle.sh proves it on every production build.
+const TestSignIn = __PREVIEW_SIGNIN__ ? lazy(() => import('../preview/TestSignIn')) : null;
 
 /** The official "G" (Google's download bundle, see ASSET-LICENSES.md), never redrawn or recoloured. */
 export function GoogleButton({ label, disabled, busy, busyLabel, onClick }: {
@@ -165,6 +170,12 @@ export function SignIn({ mode, from }: { mode: 'signin' | 'register'; from?: str
             )}
 
             {error && <ErrorNote text={error} />}
+
+            {TestSignIn && tab === 'signin' && (
+              <Suspense fallback={null}>
+                <TestSignIn from={from} />
+              </Suspense>
+            )}
 
             <section className="signin__how" aria-labelledby="signin-how">
               <h2 id="signin-how" className="signin__how-title">

@@ -80,10 +80,21 @@ def cleanup():
     sql_test.call("database/query", {"query": "delete from auth.users where email like 'smoke-%@example.invalid';"})
 
 
+def email_provider_now():
+    req = urllib.request.Request(sql_test.API + "config/auth", headers={
+        "Authorization": "Bearer " + sql_test.TOKEN, "User-Agent": "adc-diwaniya-tonight-tests"})
+    # Fixed https host; the ref is checked in sql_test and the path is a literal.
+    return bool(json.loads(urllib.request.urlopen(req, timeout=60).read().decode()).get("external_email_enabled"))  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+
+
 status = 1
+# The review test accounts (ADC-LOG-775) need the provider on, so the run puts back what it found.
+was_on = email_provider_now()
 try:
     email_provider(True)
-    sql_test.call("database/query", {"query": create(host) + create(guest)})
+    # The auth.users guard (ADC-LOG-775) lets smoke-*@example.invalid rows in only with this run switch.
+    sql_test.call("database/query", {"query": "begin; select set_config('adc.smoke_insert', 'on', true);"
+                                              + create(host) + ";" + create(guest) + "; commit;"})
     env = dict(os.environ, SMOKE_PASSWORD=password, SMOKE_HOST_EMAIL=host, SMOKE_GUEST_EMAIL=guest)
     for line in open(os.path.join(os.path.dirname(__file__), "..", ".env.local"), encoding="utf-8"):
         k, _, v = line.strip().partition("=")
@@ -92,7 +103,7 @@ try:
     status = subprocess.call(["npx", "vitest", "run", "--config", "vitest.live.config.ts"], env=env)
 finally:
     try:
-        email_provider(False)
+        email_provider(was_on)
     finally:
         cleanup()
         left = sql_test.call("database/query", {"query": "select count(*) as n from auth.users where email like 'smoke-%@example.invalid';"})
