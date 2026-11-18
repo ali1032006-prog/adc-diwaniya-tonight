@@ -3172,7 +3172,10 @@ button.link-row:focus-visible {
 }
 .appbar--solo {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* 1fr (not minmax(0,1fr)): the switch's column never shrinks under the switch, so the centred
+     name gives way on a 320 phone instead of running into it. */
+  grid-template-columns: 1fr auto 1fr;
+  column-gap: 8px;
   align-items: center;
 }
 .appbar--solo > .appbar__title {

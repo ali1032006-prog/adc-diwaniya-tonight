@@ -161,6 +161,7 @@ describe('(1) Tonight: one Filter button and its sheet', () => {
     fireEvent.click(within(d).getByRole('radio', { name: 'Governorate' }));
     const apply = within(d).getByRole('button', { name: en.tonight.apply }) as HTMLButtonElement;
     expect(apply.disabled).toBe(true); // a kind with no specific one picked yet
+    expect(within(d).getByText(en.tonight.needGov)).toBeTruthy();
     const gov = within(d).getByRole('combobox', { name: 'Governorate' }) as HTMLSelectElement;
     expect([...gov.options].filter((o) => !o.disabled).map((o) => o.textContent)).toEqual([
       'Capital',
@@ -178,6 +179,7 @@ describe('(1) Tonight: one Filter button and its sheet', () => {
     expect(screen.getByText('Diwaniya c')).toBeTruthy();
     expect(screen.queryByText('Diwaniya a')).toBeNull();
     expect(screen.getByRole('button', { name: en.tonight.filterOn('1') }).textContent).toContain('1');
+    expect(screen.getByText('All of Jahra')).toBeTruthy(); // the governorate, not the area of the same name
     expect(localStorage.getItem('dt.tonight.where.v1')).toBe('gov:jahra');
   });
 

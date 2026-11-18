@@ -169,7 +169,8 @@ function TonightList() {
   const shown = useMemo(() => filterNights(nights.data ?? [], games, where), [nights.data, games, where]);
   const on = filterCount(where, games);
   const summary = [
-    where === 'all' ? '' : where.startsWith('gov:') ? governorateLabel(where.slice(4), prefs.lang) : areaLabel(where.slice(5), prefs.lang),
+    // 'All of Hawalli' for the governorate, so it never reads like the area of the same name.
+    where === 'all' ? '' : where.startsWith('gov:') ? c.tonight.govAll(governorateLabel(where.slice(4), prefs.lang)) : areaLabel(where.slice(5), prefs.lang),
     ...games.map((g) => t.games[g]),
   ].filter(Boolean);
   const status = useMemo(() => new Map((mine.data ?? []).filter((d) => d.night_id).map((d) => [d.night_id!, d.my_status])), [mine.data]);
@@ -422,7 +423,7 @@ export function FilterSheet({
           </div>
         </fieldset>
         <p className="filter-sheet__live muted small" aria-live="polite">
-          {preview === null ? c.tonight.needPick : c.tonight.live(preview, fmt)}
+          {preview === null ? (scope === 'gov' ? c.tonight.needGov : c.tonight.needArea) : c.tonight.live(preview, fmt)}
         </p>
         <div className="filter-sheet__actions">
           <button type="button" className="btn btn--danger" onClick={() => onApply('all', [])}>
