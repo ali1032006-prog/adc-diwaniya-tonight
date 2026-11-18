@@ -492,6 +492,9 @@ bdi {
   font-size: 0.95rem;
 }
 .tv-h2h__line {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -566,9 +569,9 @@ bdi {
   border-radius: 0.6rem;
   background: var(--raised);
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 .tv-seat--open {
   background: transparent;
@@ -594,6 +597,13 @@ bdi {
 @media (min-width: 1100px) and (min-aspect-ratio: 5/4) {
   .tv-seats {
     grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+  }
+}
+
+/* a short landscape screen (720p) keeps the season to its top 6 so the board fits */
+@media (min-aspect-ratio: 5/4) and (max-height: 760px) {
+  .tv-standings tbody tr:nth-child(n + 7) {
+    display: none;
   }
 }
 
@@ -775,8 +785,17 @@ bdi {
   overflow-y: auto;
   animation: tv-fade 360ms var(--ease-enter);
 }
+.tv-reveal:focus {
+  outline: none;
+}
 .tv-reveal__inner {
   width: min(100%, 90rem);
+}
+.tv-reveal__hint {
+  margin: 1.5rem 0 0;
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 1rem;
 }
 .tv-reveal__title {
   margin: 0;

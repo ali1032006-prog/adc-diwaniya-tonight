@@ -260,6 +260,7 @@ function Board({ t, lang, board, offline, realtime, onLang, onExit }: { t: TvCop
     return () => window.clearInterval(id);
   }, []);
   const live = board.live;
+  const drawFresh = !!board.draw && now.getTime() - new Date(board.draw.at).getTime() < 90 * 60_000;
   return (
     <main className="tv-board">
       <header className="tv-head">
@@ -313,8 +314,8 @@ function Board({ t, lang, board, offline, realtime, onLang, onExit }: { t: TvCop
         <aside className="tv-side">
           <Crown t={t} names={board.crown} />
           <Season t={t} rows={board.season} />
-          <Last t={t} board={board} />
-          {board.draw && Date.now() - new Date(board.draw.at).getTime() < 90 * 60_000 && <DrawSummary t={t} draw={board.draw} />}
+          {/* a draw from the last 90 minutes takes the place of the latest results, so the board still fits */}
+          {drawFresh ? <DrawSummary t={t} draw={board.draw!} /> : <Last t={t} board={board} />}
         </aside>
       </div>
     </main>
@@ -332,14 +333,14 @@ function LiveGame({ t, g, big }: { t: TvCopy; g: TvLive; big: boolean }) {
         {g.table && <bdi className="tv-game__table">{g.table}</bdi>}
         <span className="tv-game__round">{t.round(g.rounds)}</span>
       </p>
-      <div className={`tv-teams tv-teams--${g.teams}`}>
+      <div className={`tv-teams tv-teams--${g.teams}`} aria-live="polite">
         {g.totals.map((total, i) => {
           const team = i + 1;
           const ahead = total === lead && leaders === 1 && g.rounds > 0;
           return (
             <div key={team} className={ahead ? 'tv-team tv-team--ahead' : 'tv-team'}>
               <span className="tv-team__label">{t.team(team)}</span>
-              <span key={total} className="tv-score" aria-live="polite">
+              <span key={total} className="tv-score">
                 {nf(total)}
               </span>
               <span className="tv-team__names">
@@ -581,8 +582,14 @@ export function DrawTables({ t, draw, animate }: { t: TvCopy; draw: Draw; animat
 
 /** The draw's big moment: names land in their seats one by one (all at once with reduced motion). */
 function DrawReveal({ t, draw, onClose }: { t: TvCopy; draw: Draw; onClose: () => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    box.current?.focus();
+    return () => before?.focus?.();
+  }, []);
   return (
-    <div className="tv-reveal" role="dialog" aria-modal="true" aria-labelledby="tv-reveal-t" onClick={onClose}>
+    <div ref={box} tabIndex={-1} className="tv-reveal" role="dialog" aria-modal="true" aria-labelledby="tv-reveal-t" aria-describedby="tv-reveal-hint" onClick={onClose}>
       <div className="tv-reveal__inner">
         <h2 id="tv-reveal-t" className="tv-reveal__title">
           {t.draw}
@@ -591,6 +598,9 @@ function DrawReveal({ t, draw, onClose }: { t: TvCopy; draw: Draw; onClose: () =
           {t.drawNo(draw.no)} · {t.drawFair}
         </p>
         <DrawTables t={t} draw={draw} animate />
+        <p id="tv-reveal-hint" className="tv-reveal__hint">
+          {t.revealHint}
+        </p>
       </div>
     </div>
   );
