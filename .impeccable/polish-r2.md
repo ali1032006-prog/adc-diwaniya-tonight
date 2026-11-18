@@ -80,3 +80,27 @@ Used each path myself in the render harness at 390x844, 320x568, 844x390, 768x10
 
 ## 5. Verify and finish
 Re-measured after the fixes: 72/72 (8 signed-in routes x 9 sizes) with no horizontal overflow, `innerWidth` equal to the emulated width, no target under 24px, no error notes; signed-out routes and the multi-device matrix re-run on the hash preview (handoff numbers). `npm test` 96/96, `tsc -b` clean, SQL 5/5 files green, Semgrep 0. Rendered look with real accounts still owed (Issue 52).
+
+
+# Polish re-run before the 2/3 handoff: Ali's change list 2 (ADC-LOG-764)
+
+Every step of `reference/polish.md`, on the same build as the audit re-run above.
+
+## 1. Establish the system
+Same world (direction.md): night-wool ground, madder primary and active pills, saffron for what is open or leading, camel for rims and section icons, Readex Pro, Phosphor regular/fill. Drift classified: the S9 and Me menus were a **missing shared pattern** (now `components/MenuRow.tsx`, also used by League's guides entry); the old SectionIndex jump row became **obsolete** and was deleted with its use; the one-shot score form was a **conceptual mismatch** with Ali's "track points during the game" and was replaced, not restyled; the splash reuses the icon's motif (**no new visual language**). No new tokens were needed.
+
+## 2. Gather the evidence
+Used each path in the local build and the harness at 320x568, 390x844, 844x390, 768x1024, 1280x800 (and the 9-size measure sweep), Arabic and English, night and day: first load (splash, then sign-in, no Welcome before sign-in), Me menu to each section and back, S9 menu to each section and back, S9 Location (address box, save), S6 pin card with the address above the map, score setup (pack, seats, start), live sheet (totals, leader, add round, undo a round, finish with the leader pre-picked, new game / undo game), guides (four games x two views, history not stacked), League (guides row, Season header score), board (one Score per table, no followed list). States: no rounds yet (finish disabled with a reason), sheet already open at the table (23505: joins it with a note), finished or discarded sheet, roster refused (42501), pin not yet unlocked (area only), empty address (nothing shown).
+
+## 3. Triage
+1. Broken: RTL layout widened on the solo sign-in screen (P1). 2. States: added "score at least one round", "a game is already being scored here", finished/discarded/undone notes. 3. Flow: Welcome moved after sign-in; repeated buttons removed (13, listed in duplicates-r2.md). 4. Visual: scoreboard name clamp; danger menu row keeps ink text with a madder icon (madder text on the night surface would be under 4.5:1). 5. Cleanup: SectionIndex deleted, Me/S9 in-panel titles removed (the app bar carries them), unused imports gone (tsc clean).
+
+## 4. Polish the whole path
+- Flow and hierarchy: launch, sign-in, Welcome, app, in that order; every settings section is one tap from its menu and back returns to the menu; the score sheet reads top-down as the game goes (totals, this round, the rounds, the end).
+- Layout and type: scoreboard 2-up, 4-up for Trix from 600px; round inputs 64px with 2-2.75rem digits; rounds table fixed layout so long names truncate in the header only; guides in cards at 68ch measure.
+- Colour, imagery, icons: one Phosphor icon per menu row in a raised square; saffron border for the leader and the finish panel; the splash and the sign-in art are the same mark.
+- Interaction and state: every new button has busy/disabled; undo per round is a named icon button; discard asks first; finish names the winner it will send; guide tabs keyboard-complete.
+- Content and code: name Diwaniyatna / ديوانيتنا in title, manifest, splash, sign-in header, Welcome, Terms, export filename, service worker and the push fallback (function redeploy owed); the guides are our own words; README and ASSET-LICENSES list the logo and guides as own work.
+
+## 5. Verify and finish
+Re-measured after the fixes: 117/117 (13 signed-in routes x 9 sizes) with no horizontal overflow and `innerWidth` equal to the emulated width, no target under 24px, no unnamed control, one h1 per screen and no heading jumps; contrast script clean in night and day (one false positive noted). `npm test` 117/117, `tsc -b` clean, `npm run build` clean, Semgrep 0, SQL 6/6 files green. The signed-out matrix on the hash preview is in the handoff numbers. Rendered look with real accounts still owed (Issue 52).

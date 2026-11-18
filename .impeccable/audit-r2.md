@@ -189,3 +189,89 @@ Also checked and fine: contrast of the new text (status chips, saffron seat coun
 3. **[P2] `/impeccable clarify`**: context in repeated button names; Arabic count agreement.
 4. **[P2] `/impeccable layout`**: My diwaniyas cards in two columns.
 5. **[P3] `/impeccable polish`**: Your night name alignment, then the polish pass.
+
+
+# Re-run before the 2/3 handoff: Ali's change list 2 (ADC-LOG-764)
+
+Run by hand again from `reference/audit.md`, every section (manual mode: the impeccable engine, detector and hooks are not installed, so each check below is a script or a look of my own), with `reference/craft-floor.md` read before the UI edits. Target: `fix/ADC-TSK-36-r2` after the seven items: repeated buttons removed (list in `duplicates-r2.md`), address with the pin, live scoring, game guides, logo launch then sign-in, the name Diwaniyatna, Me and S9 as menus. Evidence: the local build (`vite preview`) for the signed-out launch and sign-in, and the git-excluded render harness (mock `api.ts`/`supabase.ts`, never deployed) for every signed-in screen, because the Issue 52 hold still forbids reviewer or test accounts. Rendered: 13 signed-in routes x 9 sizes (117 measures, Arabic RTL: Tonight, Diwaniya, League, Inbox, Me menu, Me account, Me pings, S9 menu, S9 location, live score sheet, score setup, guides, S6); contrast script on 12 routes in night and day; English at 320x568; keyboard Tab into the Me menu; screenshots looked at for the splash, sign-in, Me menu, S9 menu and location, live sheet (390, 844x390, 1280), guides, S6 pin card, board. Untested: a physical phone, real signed-in data on dev (the SQL suite stands in: ali_changes2_test.sql), and Realtime between two real phones (the sheet reloads on `score_rounds`/`score_sheets` changes; the RLS that Realtime honours is tested in SQL).
+
+## Audit Health Score
+
+| # | Dimension | Score | Key Finding |
+|---|-----------|-------|-------------|
+| 1 | Accessibility | 4 | New text passes AA in both themes (only flag: League tab label measured against the track, not its madder pill, a false positive); every new control named; headings one h1, no jumps |
+| 2 | Performance | 4 | Guides (17.6 kB) and the score sheet load on demand; the launch animates transform and opacity only; no new dependency |
+| 3 | Theming | 4 | All new UI on existing tokens (raised/camel menu icons, saffron leader, madder-soft danger icon) |
+| 4 | Responsive Design | 3 | Sign-in as a solo screen widened the phone layout to 402px in RTL (screen-in slide with no clipping frame); OSM credit link 23.4px tall |
+| 5 | Implementation Integrity | 4 | One MenuRow pattern for Me, S9 and the League guides entry; one score-sheet flow replaces the one-shot form; the logo is the app icon's own motif |
+| **Total** | | **19/20** | **Excellent (minor polish)** |
+
+## Implementation Integrity Verdict
+
+Pass. Live scoring is a real server object (score_sheets/score_rounds, one open sheet per table, RLS read for whoever may score that table, writes only through functions), so "survives refresh" and "synced for the table" come from the data, not from local storage. Finish reuses record_game, so the league and its checks stay one path. The address lives in the pin row, so it cannot drift from the pin's visibility rule. The guides are our own text in one file with the same shape in both languages (a test holds that). The splash is the icon's table-and-seats mark drawn in code, landing where the sign-in page shows it.
+
+## Executive Summary
+
+- Audit Health Score: **19/20** (Excellent), up from 18/20.
+- Issues: P0 0, P1 1, P2 2, P3 2.
+- Top issues: solo sign-in widened the RTL phone layout (P1); score sheet team names cut with an ellipsis mid-list (P2); OSM credit link under 24px (P2); Tarneeb 41 tracks team totals only (P3, documented in the guide); push fallback name in the deployed send-ping function (P3).
+- Next steps: P1 and both P2s fixed in the polish pass below; P3s stated in the handoff.
+
+## Detailed Findings by Severity
+
+**[P1] Sign-in, now the first screen, widened the phone layout in Arabic**
+- Location: `src/App.tsx` solo `main.screen--solo`, `src/styles.css`
+- Category: Responsive
+- Impact: at 390x844 the layout viewport became 402px (the 12px screen-in slide runs past the left edge in RTL, and the solo screen has no `.shell` around it to clip it), so Chrome zoomed the page out.
+- WCAG/Standard: 1.4.10 Reflow
+- Recommendation: `overflow-x: clip` on `html` and `#root`, the frame every screen sits in.
+- Suggested command: /impeccable adapt
+
+**[P2] Team names on the live scoreboard cut mid-list**
+- Location: `.scoreboard__who`
+- Category: Responsive
+- Impact: with three players a team read "…، Abu Fahad، Bader"; the first name was lost.
+- Recommendation: wrap to two lines and clamp, never a one-line ellipsis.
+- Suggested command: /impeccable layout
+
+**[P2] OpenStreetMap credit link 23.4px tall**
+- Location: `.map__credit a` (S6 pin card, S9 map)
+- Category: Accessibility (2.5.8)
+- Impact: a hair under the 24px minimum target.
+- Recommendation: inline-block with 5px block padding and matching negative margin (the line does not move).
+- Suggested command: /impeccable harden
+
+**[P3] Tarneeb 41 is scored per team**
+- Location: score sheet (`teams` = 2 for every pack but Trix)
+- Category: Implementation Integrity
+- Impact: the 41 rule needs each player's own total; the sheet keeps the team's. The guide says so and tells the table to add the two partners for the team column.
+- Recommendation: a per-player column set for Tarneeb 41 if Ali wants it (a follow-up, not in his list).
+- Suggested command: /impeccable shape
+
+**[P3] Deployed send-ping still has the old fallback title**
+- Location: `supabase/functions/send-ping/index.ts` (repo updated)
+- Category: Implementation Integrity (copy)
+- Impact: only used when an inbox item has no diwaniya name; the repo now says Diwaniyatna, the deployed function changes at its next deploy.
+- Recommendation: redeploy the function with the next backend change.
+- Suggested command: /impeccable polish
+
+Also checked and fine: reduced motion (the splash keeps only its 200ms fade, seats and wordmark do not move; rounds, guide and leader tag fade); the launch total 1.3s (under Ali's 1.5s); focus rings on menu rows (inset 2px), chip buttons, the 4-way guide tabs (roving tabindex, arrows mirrored in RTL, Home/End); the round inputs take Arabic digits and a minus for Trix; the finish button stays disabled until a round exists; no horizontal overflow at 117/117 measures after the fix; Terms "Location" now names the written address.
+
+## Patterns & Systemic Issues
+
+- Any screen rendered outside `.shell` needs a clipping frame for the RTL slide; the clip now sits on `html`/`#root`, so new solo screens inherit it.
+- Settings-style pages share one MenuRow; section pages carry their title in the app bar, so the old in-panel h2 titles were removed instead of repeated.
+
+## Positive Findings
+
+- One clear place per action across the app (13 removals, the 3 deliberate pairs Ali ordered are listed for him to decide).
+- The score sheet keeps the room's numbers big (clamp to 4.5rem) and the leader marked by text and colour, never colour alone.
+- Guides are reachable from the exact place people need them (the sheet's "How to score" opens the game being scored).
+
+## Recommended Actions
+
+1. **[P1] `/impeccable adapt`**: clip the RTL slide at the app frame.
+2. **[P2] `/impeccable layout`**: scoreboard names wrap and clamp.
+3. **[P2] `/impeccable harden`**: OSM credit hit box.
+4. **[P3] `/impeccable shape`**: per-player Tarneeb 41 columns, only if Ali asks.
+5. **[P3] `/impeccable polish`**: redeploy send-ping with the next backend change, then the polish pass.
